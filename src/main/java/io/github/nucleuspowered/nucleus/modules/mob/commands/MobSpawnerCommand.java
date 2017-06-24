@@ -26,12 +26,14 @@ import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.item.inventory.ItemStackSnapshot;
 import org.spongepowered.api.item.inventory.transaction.InventoryTransactionResult;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.HashMap;
 import java.util.Map;
 
 @Permissions
 @RegisterCommand("mobspawner")
+@NonnullByDefault
 public class MobSpawnerCommand extends AbstractCommand<CommandSource> {
 
     private final String playerKey = "player";
