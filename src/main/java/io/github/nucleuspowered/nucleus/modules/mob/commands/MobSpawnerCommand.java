@@ -9,6 +9,7 @@ import io.github.nucleuspowered.nucleus.argumentparsers.PositiveIntegerArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.CatalogTypes;
@@ -62,8 +63,7 @@ public class MobSpawnerCommand extends AbstractCommand<CommandSource> {
 
         EntityType et = args.<EntityType>getOne(mobTypeKey).get();
         if (!Living.class.isAssignableFrom(et.getEntityClass())) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("args.entityparser.livingonly", et.getTranslation().get()));
-            return CommandResult.empty();
+            throw ReturnMessageException.fromKey("args.entityparser.livingonly", et.getTranslation().get());
         }
 
         int amt = args.<Integer>getOne(amountKey).orElse(1);
@@ -71,21 +71,19 @@ public class MobSpawnerCommand extends AbstractCommand<CommandSource> {
         ItemStack mobSpawnerStack = ItemStack.builder().itemType(ItemTypes.MOB_SPAWNER).quantity(amt).build();
 
         if (!mobSpawnerStack.offer(Keys.SPAWNABLE_ENTITY_TYPE, et).isSuccessful()) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.mobspawner.failed", et.getTranslation().get()));
-            return CommandResult.empty();
+            throw ReturnMessageException.fromKey("command.mobspawner.failed", et.getTranslation().get());
         }
 
         InventoryTransactionResult itr = player.getInventory().offer(mobSpawnerStack);
         int given = amt;
         if (!itr.getRejectedItems().isEmpty()) {
             ItemStackSnapshot iss = itr.getRejectedItems().stream().findFirst().get();
-            if (iss.getCount() == amt) {
+            if (iss.getQuantity() == amt) {
                 // Failed.
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.mobspawner.rejected"));
-                return CommandResult.empty();
+                throw ReturnMessageException.fromKey("command.mobspawner.rejected");
             }
 
-            given = amt - iss.getCount();
+            given = amt - iss.getQuantity();
         }
 
         if (!src.equals(player)) {
