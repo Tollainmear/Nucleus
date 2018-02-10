@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath files('gp/spongegradle-0.8.2-SNAPSHOT.jar')
+
+        // Local testing... for now
+        classpath 'org.apache.httpcomponents:httpmime:4.5.3'
+    }
+}
+
 plugins {
     id 'idea'
     id 'eclipse'
@@ -89,6 +101,13 @@ dependencies {
     testCompile "org.hamcrest:hamcrest-junit:2.0.0.0"
 }
 
+apply plugin: org.spongepowered.gradle.SpongeGradlePlugin
+apply plugin: org.spongepowered.gradle.plugin.SpongePluginBasePlugin
+apply plugin: org.spongepowered.gradle.plugin.SpongePluginPlugin
+apply plugin: org.spongepowered.gradle.meta.MetadataBasePlugin
+apply plugin: org.spongepowered.gradle.meta.MetadataPlugin
+apply plugin: org.spongepowered.gradle.ore.OreDeployPlugin
+
 license {
     ext.name = project.name
 
@@ -169,25 +188,38 @@ task copyJars(type: Copy, dependsOn: ':nucleus-api:build') {
 
 artifacts {
     archives shadowJar
+    shadow shadowJar
 }
 
 signing {
     required {
         project.properties.hasProperty("signing.keyId")
     }
-    sign configurations.archives
+    // we want to add the signatures to this configuration too, as this
+    // is what we use to upload to Ore
+    configuration=configurations.shadow
+    sign configurations.shadow
+}
+
+task signArchives(dependsOn: 'signShadow') {
+// dummy task to make the ore deploy plugin work
 }
 
 task copyAsc(type: Copy, dependsOn: 'signArchives') {
-    from([signArchives.getSignatureFiles()])
+    from([signShadow.getSignatureFiles()])
     into project.file('output')
 }
 
 task buildAndSign {
     dependsOn 'build'
     dependsOn 'signArchives'
+    dependsOn 'signShadow'
     dependsOn 'copyAsc'
 }
+
+oreDeploy.setChannel((project.properties.get("oreDeploy.channel") ?: "testing").toString())
+oreDeploy.setRecommended(project.properties.containsKey("oreDeploy.recommended"))
+oreDeploy.setDeploy(project.configurations.shadow) // yet another hack
 
 static String getGitHash() {
     def process = 'git rev-parse --short HEAD'.execute()
@@ -200,5 +232,6 @@ clean.dependsOn(cleanJars)
 copyJars.mustRunAfter(cleanJars)
 build.dependsOn(shadowJar)
 build.dependsOn(copyJars)
-signArchives.dependsOn(shadowJar)
-copyAsc.dependsOn(signArchives)
+signShadow.dependsOn(shadowJar).mustRunAfter(shadowJar)
+copyAsc.dependsOn(signShadow)
+oreDeploy.dependsOn(buildAndSign)
