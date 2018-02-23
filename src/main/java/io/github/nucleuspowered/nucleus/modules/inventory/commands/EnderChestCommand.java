@@ -65,13 +65,13 @@ public class EnderChestCommand extends AbstractCommand<Player> {
                 throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.enderchest.targetexempt", target.getName()));
             }
 
-            Container container = src.openInventory(target.getEnderChestInventory())
+            src.openInventory(target.getEnderChestInventory())
                         .orElseThrow(() -> ReturnMessageException.fromKey("command.invsee.failed"));
 
             if (this.permissions.testSuffix(target, "exempt.modify") ||
                 this.permissions.testSuffix(target, "exempt.interact") || !this.permissions.testSuffix(src, "modify")) {
 
-                InvSeeListener.addEntry(src.getUniqueId(), container);
+                InvSeeListener.addEntry(src.getUniqueId(), target.getEnderChestInventory());
             }
         } else {
             src.openInventory(src.getEnderChestInventory()).orElseThrow(() -> ReturnMessageException.fromKey("command.invsee.failed"));

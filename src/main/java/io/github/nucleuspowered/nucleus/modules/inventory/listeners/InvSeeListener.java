@@ -26,7 +26,7 @@ public class InvSeeListener extends ListenerBase {
 
     private static Map<UUID, Inventory> preventModify = Maps.newHashMap();
 
-    public static void addEntry(UUID uuid, Container inventory) {
+    public static void addEntry(UUID uuid, Inventory inventory) {
         preventModify.put(uuid, inventory);
     }
 
@@ -40,8 +40,8 @@ public class InvSeeListener extends ListenerBase {
     @Listener
     @Exclude({InteractInventoryEvent.Open.class, InteractInventoryEvent.Close.class})
     public void onInventoryChange(InteractInventoryEvent event, @Root Player player, @Getter("getTargetInventory") Container targetInventory) {
-
-        if (preventModify.get(player.getUniqueId()) == targetInventory) {
+        Inventory i = preventModify.get(player.getUniqueId());
+        if (i != null && targetInventory.containsInventory(i)) { // do we contain the player inventory?
             event.setCancelled(true);
             event.getCursorTransaction().setValid(false);
         }
@@ -50,7 +50,8 @@ public class InvSeeListener extends ListenerBase {
 
     @Listener(order = Order.POST)
     public void onInventoryClose(InteractInventoryEvent.Close event, @Root Player player, @Getter("getTargetInventory") Container targetInventory) {
-        if (preventModify.get(player.getUniqueId()) == targetInventory) {
+        Inventory i = preventModify.get(player.getUniqueId());
+        if (i != null && targetInventory.containsInventory(i)) {
             preventModify.remove(player.getUniqueId());
         }
     }

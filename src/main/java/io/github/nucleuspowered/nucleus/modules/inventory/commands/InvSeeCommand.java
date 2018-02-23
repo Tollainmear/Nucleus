@@ -83,7 +83,7 @@ public class InvSeeCommand extends AbstractCommand<Player> implements Reloadable
             Optional<Container> oc = src.openInventory(targetInv);
             if (oc.isPresent()) {
                 if (!permissions.testSuffix(src, "modify") || permissions.testSuffix(target, "exempt.interact")) {
-                    InvSeeListener.addEntry(src.getUniqueId(), oc.get());
+                    InvSeeListener.addEntry(src.getUniqueId(), targetInv);
                 }
 
                 return CommandResult.success();
