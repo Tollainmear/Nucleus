@@ -33,9 +33,6 @@ public class MailFilterArgument extends CommandElement {
 
     private static final Pattern late = Pattern.compile("b:(\\d+)");
     private static final Pattern early = Pattern.compile("a:(\\d+)");
-    private static final Pattern message = Pattern.compile("m:(.+?)(?= [abmp]:|$)");
-    private static final Pattern player = Pattern.compile("p:([a-zA-Z0-9_]{3,16})");
-    private static final Pattern console = Pattern.compile("c:");
     private final MailHandler handler;
 
     public MailFilterArgument(@Nullable Text key, MailHandler handler) {
@@ -90,15 +87,15 @@ public class MailFilterArgument extends CommandElement {
 
         List<NucleusMailService.MailFilter> lmf = Lists.newArrayList();
         if (console || !players.isEmpty()) {
-            lmf.add(handler.createSenderFilter(console, players));
+            lmf.add(this.handler.createSenderFilter(console, players));
         }
 
         if (ea != null || l != null) {
-            lmf.add(handler.createDateFilter(ea, l));
+            lmf.add(this.handler.createDateFilter(ea, l));
         }
 
         if (!message.isEmpty()) {
-            lmf.add(handler.createMessageFilter(false, message));
+            lmf.add(this.handler.createMessageFilter(false, message));
         }
 
         return lmf.isEmpty() ? null : lmf;
@@ -119,7 +116,4 @@ public class MailFilterArgument extends CommandElement {
         return ou.map(Identifiable::getUniqueId);
     }
 
-    private Instant getDateOnly(Instant i) {
-        return i.truncatedTo(ChronoUnit.DAYS);
-    }
 }

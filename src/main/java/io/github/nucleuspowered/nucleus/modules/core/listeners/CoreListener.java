@@ -4,6 +4,7 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.listeners;
 
+import com.google.common.collect.Lists;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.events.NucleusFirstJoinEvent;
@@ -11,6 +12,8 @@ import io.github.nucleuspowered.nucleus.api.text.NucleusTextTemplate;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
 import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
+import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
+import io.github.nucleuspowered.nucleus.internal.permissions.ServiceChangeListener;
 import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfig;
 import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.core.datamodules.CoreUserDataModule;
@@ -31,22 +34,38 @@ import org.spongepowered.api.event.game.state.GameStoppingServerEvent;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
 import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.scheduler.Task;
+import org.spongepowered.api.service.pagination.PaginationService;
 import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.text.format.TextColors;
 import org.spongepowered.api.util.Tristate;
 import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 
 import java.net.InetAddress;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.time.Instant;
-import java.util.Iterator;
+import java.util.List;
 import java.util.Optional;
 
 import javax.annotation.Nullable;
 
-public class CoreListener extends ListenerBase implements Reloadable {
+public class CoreListener implements Reloadable, ListenerBase {
 
     @Nullable private NucleusTextTemplate getKickOnStopMessage = null;
+    @Nullable private final URL url;
+    private boolean warnOnWildcard = true;
+
+    public CoreListener() {
+        URL u = null;
+        try {
+            u = new URL("https://ore.spongepowered.org/Nucleus/Nucleus/pages/The-Permissions-Wildcard-(And-Why-You-Shouldn't-Use-It)");
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        }
+        this.url = u;
+    }
 
     @IsCancelled(Tristate.UNDEFINED)
     @Listener(order = Order.FIRST)
@@ -92,7 +111,7 @@ public class CoreListener extends ListenerBase implements Reloadable {
                 });
             }
 
-            plugin.getUserCacheService().updateCacheForPlayer(qsu);
+            Nucleus.getNucleus().getUserCacheService().updateCacheForPlayer(qsu);
         });
     }
 
@@ -110,17 +129,17 @@ public class CoreListener extends ListenerBase implements Reloadable {
             c.setFirstPlay(c.isStartedFirstJoin() && !c.getLastLogout().isPresent());
 
             if (c.isFirstPlay()) {
-                plugin.getGeneralService().getTransient(UniqueUserCountTransientModule.class).resetUniqueUserCount();
+                Nucleus.getNucleus().getGeneralService().getTransient(UniqueUserCountTransientModule.class).resetUniqueUserCount();
             }
 
             c.setFirstJoin(player.getJoinData().firstPlayed().get());
-            if (this.plugin.isServer()) {
+            if (Nucleus.getNucleus().isServer()) {
                 c.setLastIp(player.getConnection().getAddress().getAddress());
             }
 
             // We'll do this bit shortly - after the login events have resolved.
             final String name = player.getName();
-            Task.builder().execute(() -> c.setLastKnownName(name)).delayTicks(20L).submit(plugin);
+            Task.builder().execute(() -> c.setLastKnownName(name)).delayTicks(20L).submit(Nucleus.getNucleus());
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -138,6 +157,33 @@ public class CoreListener extends ListenerBase implements Reloadable {
             event.setMessageCancelled(firstJoinEvent.isMessageCancelled());
             Nucleus.getNucleus().getUserDataManager().getUnchecked(player).get(CoreUserDataModule.class).setStartedFirstJoin(false);
         }
+
+        // Warn about wildcard.
+        if (!ServiceChangeListener.isOpOnly() && player.hasPermission("nucleus")) {
+            MessageProvider provider = Nucleus.getNucleus().getMessageProvider();
+            Nucleus.getNucleus().getLogger().warn("The player " + player.getName() + " has got either the nucleus wildcard or the * wildcard "
+                    + "permission. This may cause unintended side effects.");
+
+            if (this.warnOnWildcard) {
+                // warn
+                List<Text> text = Lists.newArrayList();
+                text.add(provider.getTextMessageWithFormat("core.permission.wildcard2"));
+                text.add(provider.getTextMessageWithFormat("core.permission.wildcard3"));
+                if (this.url != null) {
+                    text.add(
+                            provider.getTextMessageWithFormat("core.permission.wildcard4").toBuilder()
+                                    .onClick(TextActions.openUrl(this.url)).build()
+                    );
+                }
+                text.add(provider.getTextMessageWithFormat("core.permission.wildcard5"));
+                Sponge.getServiceManager().provideUnchecked(PaginationService.class)
+                        .builder()
+                        .title(provider.getTextMessageWithFormat("core.permission.wildcard"))
+                        .contents(text)
+                        .padding(Text.of(TextColors.GOLD, "-"))
+                        .sendTo(player);
+            }
+        }
     }
 
     @Listener(beforeModifications = true)
@@ -150,7 +196,7 @@ public class CoreListener extends ListenerBase implements Reloadable {
             return;
         }
 
-        this.plugin.getUserDataManager().get(player).ifPresent(x -> onPlayerQuit(x, player));
+        Nucleus.getNucleus().getUserDataManager().get(player).ifPresent(x -> onPlayerQuit(x, player));
     }
 
     private void onPlayerQuit(ModularUserService x, Player player) {
@@ -162,26 +208,25 @@ public class CoreListener extends ListenerBase implements Reloadable {
             coreUserDataModule.setLastIp(address);
             coreUserDataModule.setLastLogout(location);
             x.save();
-            plugin.getUserCacheService().updateCacheForPlayer(x);
+            Nucleus.getNucleus().getUserCacheService().updateCacheForPlayer(x);
         } catch (Exception e) {
             Nucleus.getNucleus().printStackTraceIfDebugMode(e);
         }
     }
 
-    @Override public void onReload() throws Exception {
+    @Override public void onReload() {
         CoreConfig c = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(CoreConfigAdapter.class)
                 .getNodeOrDefault();
         this.getKickOnStopMessage = c.isKickOnStop() ? c.getKickOnStopMessage() : null;
+        this.warnOnWildcard = c.isCheckForWildcard();
     }
 
     @Listener
     public void onServerAboutToStop(final GameStoppingServerEvent event) {
-        plugin.getUserDataManager().getOnlineUsers().forEach(x -> x.getPlayer().ifPresent(y -> onPlayerQuit(x, y)));
+        Nucleus.getNucleus().getUserDataManager().getOnlineUsers().forEach(x -> x.getPlayer().ifPresent(y -> onPlayerQuit(x, y)));
 
         if (this.getKickOnStopMessage != null) {
-            Iterator<Player> players = Sponge.getServer().getOnlinePlayers().iterator();
-            while (players.hasNext()) {
-                Player p = players.next();
+            for (Player p : Sponge.getServer().getOnlinePlayers()) {
                 Text msg = this.getKickOnStopMessage.getForCommandSource(p);
                 if (msg.isEmpty()) {
                     p.kick();
@@ -196,11 +241,14 @@ public class CoreListener extends ListenerBase implements Reloadable {
     @Listener
     public void onGameReload(final GameReloadEvent event) {
         CommandSource requester = event.getCause().first(CommandSource.class).orElse(Sponge.getServer().getConsole());
-        if (plugin.reload()) {
-            requester.sendMessage(Text.of(TextColors.YELLOW, "[Nucleus] ", plugin.getMessageProvider().getTextMessageWithFormat("command.reload.one")));
-            requester.sendMessage(Text.of(TextColors.YELLOW, "[Nucleus] ", plugin.getMessageProvider().getTextMessageWithFormat("command.reload.two")));
+        if (Nucleus.getNucleus().reload()) {
+            requester.sendMessage(Text.of(TextColors.YELLOW, "[Nucleus] ",
+                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reload.one")));
+            requester.sendMessage(Text.of(TextColors.YELLOW, "[Nucleus] ",
+                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reload.two")));
         } else {
-            requester.sendMessage(Text.of(TextColors.RED, "[Nucleus] ", plugin.getMessageProvider().getTextMessageWithFormat("command.reload.errorone")));
+            requester.sendMessage(Text.of(TextColors.RED, "[Nucleus] ",
+                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reload.errorone")));
         }
     }
 }

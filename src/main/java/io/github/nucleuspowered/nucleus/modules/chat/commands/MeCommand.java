@@ -8,10 +8,10 @@ import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.EventContexts;
 import io.github.nucleuspowered.nucleus.api.chat.NucleusChatChannel;
-import io.github.nucleuspowered.nucleus.argumentparsers.RemainingStringsArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -50,20 +50,18 @@ public class MeCommand extends AbstractCommand<CommandSource> implements Reloada
     private ChatConfig config = null;
     private final MeChannel channel = new MeChannel();
 
-    private final String messageKey = "message";
-
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            new RemainingStringsArgument(Text.of(messageKey))
+                NucleusParameters.MESSAGE
         };
     }
 
     @Override
     public CommandResult executeCommand(@Nonnull CommandSource src, CommandContext args) throws Exception {
-        String message = ChatListener.stripPermissionless(src, args.<String>getOne(messageKey).get());
+        String message = ChatListener.stripPermissionless(src, args.<String>getOne(NucleusParameters.Keys.MESSAGE).get());
         Text header = config.getMePrefix().getForCommandSource(src);
-        TextParsingUtils.StyleTuple t = plugin.getTextParsingUtils().getLastColourAndStyle(header, null);
+        TextParsingUtils.StyleTuple t = Nucleus.getNucleus().getTextParsingUtils().getLastColourAndStyle(header, null);
         Text originalMessage = TextSerializers.FORMATTING_CODE.deserialize(message);
         MessageEvent.MessageFormatter formatter = new MessageEvent.MessageFormatter(
             Text.builder().color(t.colour).style(t.style)
@@ -80,7 +78,7 @@ public class MeCommand extends AbstractCommand<CommandSource> implements Reloada
                 EventContext.builder().add(EventContexts.SHOULD_FORMAT_CHANNEL, false).build(), src);
 
         if (Sponge.getEventManager().post(event)) {
-            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.me.cancel"));
+            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.me.cancel"));
         }
 
         event.getChannel().orElse(channel).send(src, Util.applyChatTemplate(event.getFormatter()), ChatTypes.CHAT);

@@ -5,13 +5,12 @@
 package io.github.nucleuspowered.nucleus.modules.mail.commands;
 
 import io.github.nucleuspowered.nucleus.argumentparsers.MailFilterArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.modules.mail.handlers.MailHandler;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -30,17 +29,16 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 public class MailOtherCommand extends AbstractCommand<CommandSource> {
 
     private final MailHandler handler = getServiceUnchecked(MailHandler.class);
-    private final String userKey = "user";
 
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            SelectorWrapperArgument.nicknameSelector(Text.of(userKey), NicknameArgument.UnderlyingType.USER),
-            GenericArguments.optional(GenericArguments.allOf(new MailFilterArgument(Text.of(MailReadBase.filters), handler)))};
+                NucleusParameters.ONE_USER,
+                GenericArguments.optional(GenericArguments.allOf(new MailFilterArgument(Text.of(MailReadBase.filters), this.handler)))};
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        return MailReadBase.INSTANCE.executeCommand(src, args.<User>getOne(userKey).get(), args.getAll(MailReadBase.filters));
+    public CommandResult executeCommand(CommandSource src, CommandContext args) {
+        return MailReadBase.INSTANCE.executeCommand(src, args.<User>getOne(NucleusParameters.Keys.USER).get(), args.getAll(MailReadBase.filters));
     }
 }

@@ -5,7 +5,9 @@
 package io.github.nucleuspowered.nucleus.configurate.datatypes;
 
 import com.flowpowered.math.vector.Vector3d;
+import io.github.nucleuspowered.neutrino.annotations.ProcessSetting;
 import io.github.nucleuspowered.nucleus.api.exceptions.NoSuchWorldException;
+import io.github.nucleuspowered.nucleus.configurate.settingprocessor.WorldMigrationSettingProcessor;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 import org.spongepowered.api.Sponge;
@@ -35,7 +37,9 @@ public class LocationNode {
 
     @Setting private double rotz;
 
-    @Setting private UUID world;
+    @Setting
+    @ProcessSetting(WorldMigrationSettingProcessor.class)
+    private UUID world;
 
     public LocationNode() { }
 
@@ -62,11 +66,11 @@ public class LocationNode {
     }
 
     public Vector3d getPosition() {
-        return new Vector3d(x, y, z);
+        return new Vector3d(this.x, this.y, this.z);
     }
 
     public UUID getWorld() {
-        return world;
+        return this.world;
     }
 
     public Tuple<WorldProperties, Vector3d> getLocationIfNotLoaded() throws NoSuchWorldException {
@@ -81,16 +85,16 @@ public class LocationNode {
      * @throws NoSuchWorldException The world does not exist.
      */
     public Location<World> getLocation() throws NoSuchWorldException {
-        Optional<World> ow = Sponge.getServer().getWorld(world);
+        Optional<World> ow = Sponge.getServer().getWorld(this.world);
 
         if (ow.isPresent()) {
-            return new Location<>(ow.get(), x, y, z);
+            return new Location<>(ow.get(), this.x, this.y, this.z);
         }
 
         throw new NoSuchWorldException();
     }
 
     public Vector3d getRotation() {
-        return new Vector3d(rotx, roty, rotz);
+        return new Vector3d(this.rotx, this.roty, this.rotz);
     }
 }

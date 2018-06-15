@@ -24,41 +24,30 @@ public class ConfigurateDataProvider<T> extends AbstractConfigurateDataProvider<
     private final TypeToken<T> typeToken;
     private final Supplier<T> defaultSupplier;
 
-    @SuppressWarnings("unchecked")
-    public ConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>>  loaderProvider, Path file, Logger logger) {
-        this(type, loaderProvider, () -> {
-            try {
-                return (T)type.getRawType().newInstance();
-            } catch (InstantiationException | IllegalAccessException e) {
-                e.printStackTrace();
-                return null;
-            }
-        }, file, true, logger);
-    }
-
-    public ConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>>  loaderProvider, Supplier<T> defaultSupplier, Path file, boolean requiresChildren, Logger logger) {
-        super(loaderProvider, file, requiresChildren, logger);
+    public ConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>> loaderProvider, Supplier<T> defaultSupplier, Path file,
+            Logger logger) {
+        super(loaderProvider, file, logger);
         this.typeToken = type;
         this.defaultSupplier = defaultSupplier;
     }
 
     @Override protected T transformOnLoad(ConfigurationNode node) throws Exception {
         if (node.getOptions().acceptsType(Short.class)) {
-            return node.getValue(typeToken, defaultSupplier);
+            return node.getValue(this.typeToken, this.defaultSupplier);
         }
 
-        return fixNode(node, true).getValue(typeToken, defaultSupplier);
+        return fixNode(node, true).getValue(this.typeToken, this.defaultSupplier);
     }
 
     @Override protected ConfigurationNode transformOnSave(T info) throws Exception {
-        ConfigurationOptions configurateOptions = ConfigurateHelper.setOptions(loader.getDefaultOptions());
-        ConfigurationNode node = loader.createEmptyNode(configurateOptions);
+        ConfigurationOptions configurateOptions = ConfigurateHelper.setOptions(this.loader.getDefaultOptions());
+        ConfigurationNode node = this.loader.createEmptyNode(configurateOptions);
 
         if (node.getOptions().acceptsType(Short.class) && node.getOptions().acceptsType(Byte.class)) {
-            return node.setValue(typeToken, info);
+            return node.setValue(this.typeToken, info);
         }
 
-        return fixNode(node, false).setValue(typeToken, info);
+        return fixNode(node, false).setValue(this.typeToken, info);
     }
 
     private ConfigurationNode fixNode(ConfigurationNode node, boolean setNode) {

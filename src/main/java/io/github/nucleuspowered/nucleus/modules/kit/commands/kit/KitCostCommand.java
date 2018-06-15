@@ -4,15 +4,14 @@
  */
 package io.github.nucleuspowered.nucleus.modules.kit.commands.kit;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
-import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
-import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
+import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -23,39 +22,36 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 /**
  * Sets kit cost.
- *
- * Command Usage: /kit cost [kit] [cost] Permission: plugin.kit.cost.base
  */
 @Permissions(prefix = "kit", suggestedLevel = SuggestedLevel.ADMIN)
 @RegisterCommand(value = {"cost", "setcost"}, subcommandOf = KitCommand.class)
 @RunAsync
 @NoModifiers
 @NonnullByDefault
-public class KitCostCommand extends AbstractCommand<CommandSource> {
-
-    private final KitHandler kitHandler = getServiceUnchecked(KitHandler.class);
+public class KitCostCommand extends KitFallbackBase<CommandSource> {
 
     private final String costKey = "cost";
-    private final String kitKey = "kit";
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {GenericArguments.onlyOne(new KitArgument(Text.of(kitKey), false)),
-                GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of(costKey)))};
+        return new CommandElement[] {
+                KitFallbackBase.KIT_PARAMETER_NO_PERM_CHECK,
+                GenericArguments.onlyOne(GenericArguments.doubleNum(Text.of(this.costKey)))
+        };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Kit kit = args.<Kit>getOne(kitKey).get();
-        double cost = args.<Double>getOne(costKey).get();
+    public CommandResult executeCommand(CommandSource src, CommandContext args) {
+        Kit kit = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+        double cost = args.<Double>getOne(this.costKey).get();
 
         if (cost < 0) {
             cost = 0;
         }
 
         kit.setCost(cost);
-        kitHandler.saveKit(kit);
-        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.cost.success", kit.getName(), String.valueOf(cost)));
+        KIT_HANDLER.saveKit(kit);
+        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.cost.success", kit.getName(), String.valueOf(cost)));
         return CommandResult.success();
     }
 }

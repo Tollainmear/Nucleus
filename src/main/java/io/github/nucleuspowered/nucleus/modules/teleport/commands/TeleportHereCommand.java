@@ -4,14 +4,14 @@
  */
 package io.github.nucleuspowered.nucleus.modules.teleport.commands;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.argumentparsers.IfConditionElseArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -26,7 +26,6 @@ import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
-import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.HashMap;
@@ -45,13 +44,11 @@ import java.util.Map;
 @NonnullByDefault
 public class TeleportHereCommand extends AbstractCommand<Player> implements Reloadable {
 
-    private final String playerKey = "subject";
-
     private final TeleportHandler handler = getServiceUnchecked(TeleportHandler.class);
 
     private boolean isDefaultQuiet = false;
 
-    @Override public void onReload() throws Exception {
+    @Override public void onReload() {
         this.isDefaultQuiet = getServiceUnchecked(TeleportConfigAdapter.class).getNodeOrDefault().isDefaultQuiet();
     }
 
@@ -66,29 +63,28 @@ public class TeleportHereCommand extends AbstractCommand<Player> implements Relo
     public CommandElement[] getArguments() {
         return new CommandElement[] {
                 GenericArguments.flags().flag("q", "-quiet").buildWith(
-                    GenericArguments.onlyOne(
                         IfConditionElseArgument.permission(this.permissions.getPermissionWithSuffix("offline"),
-                            SelectorWrapperArgument.nicknameSelector(Text.of(playerKey), NicknameArgument.UnderlyingType.USER),
-                            SelectorWrapperArgument.nicknameSelector(Text.of(playerKey), NicknameArgument.UnderlyingType.PLAYER))))
+                                NucleusParameters.ONE_USER_PLAYER_KEY,
+                                NucleusParameters.ONE_PLAYER))
         };
     }
 
     @Override
     public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         boolean beQuiet = args.<Boolean>getOne("q").orElse(this.isDefaultQuiet);
-        User target = args.<User>getOne(playerKey).get();
+        User target = args.<User>getOne(NucleusParameters.Keys.PLAYER).get();
         if (target.getPlayer().isPresent()) {
-            handler.getBuilder().setFrom(target.getPlayer().get()).setTo(src).setSilentSource(beQuiet).startTeleport();
+            this.handler.getBuilder().setFrom(target.getPlayer().get()).setTo(src).setSilentSource(beQuiet).startTeleport();
         } else {
-            permissions.checkSuffix(src, "offline", () -> ReturnMessageException.fromKey("command.tphere.noofflineperms"));
+            this.permissions.checkSuffix(src, "offline", () -> ReturnMessageException.fromKey("command.tphere.noofflineperms"));
 
             // Update the offline player's next location
-            ModularUserService mus = plugin.getUserDataManager().get(target)
+            ModularUserService mus = Nucleus.getNucleus().getUserDataManager().get(target)
                     .orElseThrow(() -> ReturnMessageException.fromKey("command.tphere.couldnotset", target.getName()));
             mus.get(CoreUserDataModule.class).sendToLocationOnLogin(src.getLocation());
             mus.save();
 
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tphere.offlinesuccess", target.getName()));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tphere.offlinesuccess", target.getName()));
         }
 
         return CommandResult.success();

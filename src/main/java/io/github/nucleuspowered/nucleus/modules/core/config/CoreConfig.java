@@ -4,10 +4,15 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.config;
 
+import com.google.common.collect.Maps;
 import io.github.nucleuspowered.neutrino.annotations.DoNotGenerate;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateImpl;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
+import uk.co.drnaylor.quickstart.config.NoMergeIfPresent;
+
+import java.util.Map;
+import java.util.UUID;
 
 @ConfigSerializable
 public class CoreConfig {
@@ -55,8 +60,27 @@ public class CoreConfig {
     @Setting(value = "track-world-uuids", comment = "config.core.track")
     private boolean trackWorldUUIDs = true;
 
+    @NoMergeIfPresent
+    @Setting(value = "world-uuid-migration", comment = "config.core.worlduuidmigration")
+    private Map<UUID, String> uuidMigration = Maps.newHashMap();
+
+    @Setting(value = "check-for-wildcard", comment = "config.core.wildcard")
+    private boolean checkForWildcard = true;
+
+    @Setting(value = "show-warning-on-startup", comment = "config.core.warning-on-startup")
+    private boolean warningOnStartup = true;
+
+    @Setting(value = "more-accurate-visitor-count", comment = "config.core.accurate")
+    private boolean moreAccurate = false;
+
+    @Setting(value = "override-language", comment = "config.core.language")
+    private String serverLocale = "default";
+
+    @Setting(value = "data-file-location", comment = "config.core.datafilelocation")
+    private String dataFileLocation = "default";
+
     public boolean isDebugmode() {
-        return debugmode;
+        return this.debugmode;
     }
 
     public boolean isPrintOnAutosave() {
@@ -64,39 +88,39 @@ public class CoreConfig {
     }
 
     public boolean isCustommessages() {
-        return custommessages;
+        return this.custommessages;
     }
 
     public WarmupConfig getWarmupConfig() {
-        return warmupConfig;
+        return this.warmupConfig;
     }
 
     public String getCommandOnNameClick() {
-        return commandOnNameClick;
+        return this.commandOnNameClick;
     }
 
     public boolean isKickOnStop() {
-        return kickOnStop.isKickOnStop();
+        return this.kickOnStop.isKickOnStop();
     }
 
     public NucleusTextTemplateImpl getKickOnStopMessage() {
-        return kickOnStop.getKickOnStopMessage();
+        return this.kickOnStop.getKickOnStopMessage();
     }
 
     public boolean isEnableDocGen() {
-        return enableDocGen;
+        return this.enableDocGen;
     }
 
     public boolean isErrorOnStartup() {
-        return errorOnStartup;
+        return this.errorOnStartup;
     }
 
     public SafeTeleportConfig getSafeTeleportConfig() {
-        return safeTeleportConfig;
+        return this.safeTeleportConfig;
     }
 
     public boolean isConsoleOverride() {
-        return consoleOverride;
+        return this.consoleOverride;
     }
 
     /**
@@ -112,6 +136,26 @@ public class CoreConfig {
     }
 
     public boolean isTrackWorldUUIDs() {
-        return trackWorldUUIDs;
+        return this.trackWorldUUIDs;
+    }
+
+    public Map<UUID, String> getUuidMigration() {
+        return this.uuidMigration;
+    }
+
+    public boolean isCheckForWildcard() {
+        return this.checkForWildcard;
+    }
+
+    public boolean isWarningOnStartup() {
+        return this.warningOnStartup;
+    }
+
+    public boolean isMoreAccurate() {
+        return this.moreAccurate;
+    }
+
+    public String getServerLocale() {
+        return this.serverLocale;
     }
 }

@@ -16,8 +16,10 @@ import io.github.nucleuspowered.nucleus.api.service.NucleusKitService;
 import io.github.nucleuspowered.nucleus.dataservices.KitService;
 import io.github.nucleuspowered.nucleus.internal.CommandPermissionHandler;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateFactory;
-import io.github.nucleuspowered.nucleus.modules.kit.KitModule;
+import io.github.nucleuspowered.nucleus.internal.traits.InternalServiceManagerTrait;
+import io.github.nucleuspowered.nucleus.internal.traits.MessageProviderTrait;
 import io.github.nucleuspowered.nucleus.modules.kit.commands.kit.KitCommand;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfig;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
@@ -51,7 +53,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public class KitHandler implements NucleusKitService {
+import javax.annotation.Nullable;
+
+public class KitHandler implements NucleusKitService, Reloadable, InternalServiceManagerTrait, MessageProviderTrait {
 
     private static final InventoryTransactionResult EMPTY_ITR =
             InventoryTransactionResult.builder().type(InventoryTransactionResult.Type.SUCCESS).build();
@@ -73,6 +77,10 @@ public class KitHandler implements NucleusKitService {
     private final Map<Container, Tuple<Kit, Inventory>> inventoryKitCommandMap = Maps.newHashMap();
 
     private final KitService store = Nucleus.getNucleus().getKitService();
+
+    public boolean exists(String name, boolean includeHidden) {
+        return this.store.getKitNames(includeHidden).stream().anyMatch(x -> x.equalsIgnoreCase(name));
+    }
 
     @Override
     public Set<String> getKitNames() {
@@ -119,13 +127,13 @@ public class KitHandler implements NucleusKitService {
             if (oi.isPresent()) {
 
                 // if it's one time only and the user does not have an exemption...
-                if (kit.isOneTime() && !player.hasPermission(cph.getPermissionWithSuffix("exempt.onetime"))) {
+                if (kit.isOneTime() && !player.hasPermission(this.cph.getPermissionWithSuffix("exempt.onetime"))) {
                     throw new KitRedeemException("Already redeemed", KitRedeemException.Reason.ALREADY_REDEEMED);
                 }
 
                 // If we have a cooldown for the kit, and we don't have permission to
                 // bypass it...
-                if (!cph.testCooldownExempt(player) && kit.getCooldown().map(Duration::getSeconds).orElse(0L) > 0) {
+                if (!this.cph.testCooldownExempt(player) && kit.getCooldown().map(Duration::getSeconds).orElse(0L) > 0) {
 
                     // ...and we haven't reached the cooldown point yet...
                     Instant timeForNextUse = oi.get().plus(kit.getCooldown().get());
@@ -149,7 +157,7 @@ public class KitHandler implements NucleusKitService {
 
         InventoryTransactionResult inventoryTransactionResult = EMPTY_ITR;
         if (!kit.getStacks().isEmpty()) {
-            inventoryTransactionResult = addToStandardInventory(player, kit.getStacks(), isProcessTokens);
+            inventoryTransactionResult = addToStandardInventory(player, kit.getStacks(), this.isProcessTokens);
             if (!isFirstJoin && !inventoryTransactionResult.getRejectedItems().isEmpty() && isMustGetAll) {
                 Inventory inventory = Util.getStandardInventory(player);
 
@@ -192,8 +200,8 @@ public class KitHandler implements NucleusKitService {
 
     @Override
     public boolean removeKit(String kitName) {
-        if (store.removeKit(kitName)) {
-            store.save();
+        if (this.store.removeKit(kitName)) {
+            this.store.save();
             return true;
         }
 
@@ -201,72 +209,92 @@ public class KitHandler implements NucleusKitService {
     }
 
     @Override
-    public synchronized void saveKit(Kit kit) {
+    public void saveKit(Kit kit) {
+        saveKitInternal(kit.getName(), kit);
+    }
+
+    private synchronized void saveKitInternal(String name, Kit kit) {
         Preconditions.checkArgument(kit instanceof SingleKit);
-        Util.getKeyIgnoreCase(store.getKitNames(true), kit.getName()).ifPresent(store::removeKit);
-        store.addKit(kit);
-        store.save();
+        Util.getKeyIgnoreCase(this.store.getKitNames(true), name).ifPresent(this.store::removeKit);
+        this.store.addKit(name, kit);
+        this.store.save();
     }
 
     @Override
     public Kit createKit(String name) throws IllegalArgumentException {
-        Optional<String> key = Util.getKeyIgnoreCase(store.getKitNames(true), name);
+        Optional<String> key = Util.getKeyIgnoreCase(this.store.getKitNames(true), name);
         key.ifPresent(s -> {
             throw new IllegalArgumentException("Kit " + name + " already exists!");
         });
         return new SingleKit(name);
     }
 
+    @Override
+    public void renameKit(final String kitName, final String newKitName) throws IllegalArgumentException {
+        Kit targetKit = getKit(kitName).orElseThrow(() -> new IllegalArgumentException(getMessageString("kit.noexists", kitName)));
+        if (Util.getKeyIgnoreCase(getKitNames(), newKitName).isPresent()) {
+            throw new IllegalArgumentException(getMessageString("kit.cannotrename", kitName, newKitName));
+        }
+
+        saveKitInternal(newKitName, targetKit);
+        removeKit(kitName);
+    }
+
     public Optional<Tuple<Kit, Inventory>> getCurrentlyOpenInventoryKit(Container inventory) {
-        return Optional.ofNullable(inventoryKitMap.get(inventory));
+        return Optional.ofNullable(this.inventoryKitMap.get(inventory));
     }
 
     public boolean isOpen(String kitName) {
-        return inventoryKitMap.values().stream().anyMatch(x -> x.getFirst().getName().equalsIgnoreCase(kitName));
+        return this.inventoryKitMap.values().stream().anyMatch(x -> x.getFirst().getName().equalsIgnoreCase(kitName));
     }
 
     public void addKitInventoryToListener(Tuple<Kit, Inventory> kit, Container inventory) {
-        Preconditions.checkState(!inventoryKitMap.containsKey(inventory));
-        inventoryKitMap.put(inventory, kit);
+        Preconditions.checkState(!this.inventoryKitMap.containsKey(inventory));
+        this.inventoryKitMap.put(inventory, kit);
     }
 
     public void removeKitInventoryFromListener(Container inventory) {
-        inventoryKitMap.remove(inventory);
+        this.inventoryKitMap.remove(inventory);
     }
 
     public Optional<Tuple<Kit, Inventory>> getCurrentlyOpenInventoryCommandKit(Container inventory) {
-        return Optional.ofNullable(inventoryKitCommandMap.get(inventory));
+        return Optional.ofNullable(this.inventoryKitCommandMap.get(inventory));
     }
 
     public void addKitCommandInventoryToListener(Tuple<Kit, Inventory> kit, Container inventory) {
-        Preconditions.checkState(!inventoryKitCommandMap.containsKey(inventory));
-        inventoryKitCommandMap.put(inventory, kit);
+        Preconditions.checkState(!this.inventoryKitCommandMap.containsKey(inventory));
+        this.inventoryKitCommandMap.put(inventory, kit);
     }
 
     public void removeKitCommandInventoryFromListener(Container inventory) {
-        inventoryKitCommandMap.remove(inventory);
+        this.inventoryKitCommandMap.remove(inventory);
     }
 
     public void addViewer(Container inventory) {
         this.viewers.add(inventory);
     }
 
+    @Nullable private Boolean hasViewersWorks = null;
+
     public void removeViewer(Container inventory) {
         this.viewers.remove(inventory);
-        this.viewers.removeIf(x -> !x.hasViewers());
+        if (this.hasViewersWorks == null) {
+            try {
+                inventory.hasViewers();
+                this.hasViewersWorks = true;
+            } catch (Throwable throwable) {
+                this.hasViewersWorks = false;
+                return;
+            }
+        }
+
+        if (this.hasViewersWorks) {
+            this.viewers.removeIf(x -> !x.hasViewers());
+        }
     }
 
     public boolean isViewer(Container inventory) {
         return this.viewers.contains(inventory);
-    }
-
-    public void reload() {
-        KitConfig kc = Nucleus.getNucleus().getConfigValue(
-                KitModule.ID,
-                KitConfigAdapter.class,
-                x -> x).orElse(new KitConfig());
-        this.isProcessTokens = kc.isProcessTokens();
-        this.isMustGetAll = kc.isMustGetAll();
     }
 
     public void processTokensInItemStacks(Player player, Collection<ItemStack> stacks) {
@@ -325,5 +353,12 @@ public class KitHandler implements NucleusKitService {
         }
 
         return resultBuilder.type(success ? InventoryTransactionResult.Type.SUCCESS : InventoryTransactionResult.Type.FAILURE).build();
+    }
+
+    @Override
+    public void onReload() {
+        KitConfig kitConfig = this.getServiceUnchecked(KitConfigAdapter.class).getNodeOrDefault();
+        this.isMustGetAll = kitConfig.isMustGetAll();
+        this.isProcessTokens = kitConfig.isProcessTokens();
     }
 }

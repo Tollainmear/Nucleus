@@ -4,10 +4,12 @@
  */
 package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
@@ -18,7 +20,6 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.CauseStackManager;
 import org.spongepowered.api.event.cause.EventContext;
@@ -36,14 +37,11 @@ import java.util.Map;
 @NonnullByDefault
 public class SudoCommand extends AbstractCommand<CommandSource> {
 
-    private final String playerKey = "subject";
-    private final String commandKey = "command";
-
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[]{
-                GenericArguments.onlyOne(GenericArguments.player(Text.of(playerKey))),
-                GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(commandKey)))
+                NucleusParameters.ONE_PLAYER,
+                NucleusParameters.COMMAND
         };
     }
 
@@ -56,16 +54,16 @@ public class SudoCommand extends AbstractCommand<CommandSource> {
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Player pl = args.<Player>getOne(playerKey).get();
-        String cmd = args.<String>getOne(commandKey).get();
-        if (pl.equals(src) || permissions.testSuffix(pl, "exempt.target", src, false)) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.sudo.noperms"));
+        Player pl = args.<Player>getOne(NucleusParameters.Keys.PLAYER).get();
+        String cmd = args.<String>getOne(NucleusParameters.Keys.COMMAND).get();
+        if (pl.equals(src) || this.permissions.testSuffix(pl, "exempt.target", src, false)) {
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.sudo.noperms"));
             return CommandResult.empty();
         }
 
         if (cmd.startsWith("c:")) {
             if (cmd.equals("c:")) {
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.sudo.chatfail"));
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.sudo.chatfail"));
                 return CommandResult.empty();
             }
 
@@ -82,7 +80,7 @@ public class SudoCommand extends AbstractCommand<CommandSource> {
             return CommandResult.success();
         }
 
-        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.sudo.force", pl.getName(), cmd));
+        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.sudo.force", pl.getName(), cmd));
         Sponge.getCommandManager().process(pl, cmd);
         return CommandResult.success();
     }

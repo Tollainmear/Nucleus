@@ -8,13 +8,12 @@ import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Home;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.NamedLocation;
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -24,7 +23,6 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
-import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.service.pagination.PaginationList;
 import org.spongepowered.api.text.Text;
@@ -49,11 +47,10 @@ import java.util.stream.Collectors;
 @RegisterCommand(value = "list", subcommandOf = HomeCommand.class, rootAliasRegister = {"listhomes", "homes"})
 public class ListHomeCommand extends AbstractCommand<CommandSource> {
 
-    private final String player = "subject";
     private final String exempt = Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(HomeOtherCommand.class)
         .getPermissionWithSuffix(HomeOtherCommand.OTHER_EXEMPT_PERM_SUFFIX);
 
-    private final HomeHandler homeHandler = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(HomeHandler.class);
+    private final HomeHandler homeHandler = getServiceUnchecked(HomeHandler.class);
 
     @Override
     public Map<String, PermissionInformation> permissionSuffixesToRegister() {
@@ -64,32 +61,32 @@ public class ListHomeCommand extends AbstractCommand<CommandSource> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {GenericArguments.optional(GenericArguments.onlyOne(
-                GenericArguments.requiringPermission(
-                        SelectorWrapperArgument.nicknameSelector(Text.of(player), NicknameArgument.UnderlyingType.USER, true, Player.class),
-                        permissions.getPermissionWithSuffix("others"))))};
+        return new CommandElement[] {
+                GenericArguments.optional(GenericArguments.requiringPermission(
+                        NucleusParameters.ONE_USER, this.permissions.getPermissionWithSuffix("others")))
+        };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        User user = this.getUserFromArgs(User.class, src, player, args); // args.getOne(subject);
+        User user = this.getUserFromArgs(User.class, src, NucleusParameters.Keys.USER, args);
         Text header;
 
         boolean other = src instanceof User && !((User) src).getUniqueId().equals(user.getUniqueId());
         if (other && user.hasPermission(this.exempt)) {
-            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.listhome.exempt"));
+            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.listhome.exempt"));
         }
 
-        List<Home> msw = homeHandler.getHomes(user);
+        List<Home> msw = this.homeHandler.getHomes(user);
         if (msw.isEmpty()) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.home.nohomes"));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.home.nohomes"));
             return CommandResult.empty();
         }
 
         if (other) {
-            header = plugin.getMessageProvider().getTextMessageWithFormat("home.title.name", user.getName());
+            header = Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("home.title.name", user.getName());
         } else {
-            header = plugin.getMessageProvider().getTextMessageWithFormat("home.title.normal");
+            header = Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("home.title.normal");
         }
 
         List<Text> lt = msw.stream().sorted(Comparator.comparing(NamedLocation::getName)).map(x -> {
@@ -97,18 +94,20 @@ public class ListHomeCommand extends AbstractCommand<CommandSource> {
             if (!olw.isPresent()) {
                 return Text.builder().append(
                                 Text.builder(x.getName()).color(TextColors.RED)
-                                        .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("home.warphoverinvalid", x.getName())))
+                                        .onHover(TextActions.showText(
+                                                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("home.warphoverinvalid", x.getName())))
                                         .build())
                         .build();
             } else {
                 final Location<World> lw = olw.get();
                 return Text.builder().append(
                                 Text.builder(x.getName()).color(TextColors.GREEN).style(TextStyles.UNDERLINE)
-                                        .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("home.warphover", x.getName())))
+                                        .onHover(TextActions.showText(
+                                                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("home.warphover", x.getName())))
                                         .onClick(TextActions.runCommand(other ? "/homeother " + user.getName() + " " + x.getName()
                                                 : "/home " + x.getName()))
                                         .build())
-                        .append(plugin.getMessageProvider().getTextMessageWithFormat("home.location", lw.getExtent().getName(), String.valueOf(lw.getBlockX()),
+                        .append(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("home.location", lw.getExtent().getName(), String.valueOf(lw.getBlockX()),
                                 String.valueOf(lw.getBlockY()), String.valueOf(lw.getBlockZ())))
                         .build();
             }

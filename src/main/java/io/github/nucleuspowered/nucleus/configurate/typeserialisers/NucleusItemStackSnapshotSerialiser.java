@@ -9,7 +9,6 @@ import com.google.common.reflect.TypeToken;
 import io.github.nucleuspowered.nucleus.configurate.wrappers.NucleusItemStackSnapshot;
 import io.github.nucleuspowered.nucleus.util.TypeHelper;
 import ninja.leaping.configurate.ConfigurationNode;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import ninja.leaping.configurate.objectmapping.serialize.TypeSerializer;
 import org.spongepowered.api.data.DataContainer;
 import org.spongepowered.api.data.DataQuery;
@@ -29,7 +28,7 @@ public class NucleusItemStackSnapshotSerialiser implements TypeSerializer<Nucleu
     private final TypeToken<ItemStackSnapshot> iss = TypeToken.of(ItemStackSnapshot.class);
 
     @Override
-    public NucleusItemStackSnapshot deserialize(TypeToken<?> type, ConfigurationNode value) throws ObjectMappingException {
+    public NucleusItemStackSnapshot deserialize(TypeToken<?> type, ConfigurationNode value) {
         // Process enchantments, temporary fix before Sponge gets a more general fix in.
         boolean emptyEnchant = false;
         ConfigurationNode ench = value.getNode("UnsafeData", "ench");
@@ -57,7 +56,7 @@ public class NucleusItemStackSnapshotSerialiser implements TypeSerializer<Nucleu
         if (!data.isVirtual() && data.hasListChildren()) {
             List<? extends ConfigurationNode> n = data.getChildrenList().stream()
                 .filter(x ->
-                    !x.getNode("DataClass").getString().endsWith("SpongeEnchantmentData")
+                        !x.getNode("DataClass").getString("").endsWith("SpongeEnchantmentData")
                     || (!x.getNode("ManipulatorData", "ItemEnchantments").isVirtual() && x.getNode("ManipulatorData", "ItemEnchantments").hasListChildren()))
                 .collect(Collectors.toList());
             emptyEnchant = n.size() != data.getChildrenList().size();
@@ -110,7 +109,7 @@ public class NucleusItemStackSnapshotSerialiser implements TypeSerializer<Nucleu
     }
 
     @Override
-    public void serialize(TypeToken<?> type, NucleusItemStackSnapshot obj, ConfigurationNode value) throws ObjectMappingException {
+    public void serialize(TypeToken<?> type, NucleusItemStackSnapshot obj, ConfigurationNode value) {
         DataContainer view = obj.getSnapshot().toContainer();
         Map<DataQuery, Object> dataQueryObjectMap = view.getValues(true);
         for (Map.Entry<DataQuery, Object> entry : dataQueryObjectMap.entrySet()) {

@@ -4,15 +4,18 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.service.NucleusPlayerMetadataService;
+import io.github.nucleuspowered.nucleus.api.service.NucleusWorldUUIDChangeService;
 import io.github.nucleuspowered.nucleus.internal.annotations.RegisterService;
 import io.github.nucleuspowered.nucleus.internal.qsml.module.ConfigurableModule;
 import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.core.service.PlayerMetadataService;
-import org.spongepowered.api.Sponge;
+import io.github.nucleuspowered.nucleus.modules.core.service.UUIDChangeService;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 
 @RegisterService(value = PlayerMetadataService.class, apiService = NucleusPlayerMetadataService.class)
+@RegisterService(value = UUIDChangeService.class, apiService = NucleusWorldUUIDChangeService.class)
 @ModuleData(id = CoreModule.ID, name = "Core", isRequired = true)
 public class CoreModule extends ConfigurableModule<CoreConfigAdapter> {
 
@@ -27,7 +30,7 @@ public class CoreModule extends ConfigurableModule<CoreConfigAdapter> {
     protected void performPreTasks() throws Exception {
         super.performPreTasks();
 
-        this.plugin.reloadMessages();
+        Nucleus.getNucleus().reloadMessages();
     }
 
 }

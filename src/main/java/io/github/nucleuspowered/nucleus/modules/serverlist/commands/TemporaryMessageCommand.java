@@ -4,13 +4,14 @@
  */
 package io.github.nucleuspowered.nucleus.modules.serverlist.commands;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.argumentparsers.BoundedIntegerArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.TimespanArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.modules.serverlist.datamodules.ServerListGeneralDataModule;
 import org.spongepowered.api.command.CommandResult;
@@ -31,25 +32,21 @@ import java.util.Optional;
 @NonnullByDefault
 public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
 
-    private final String timespan = "time to display";
     private final String line = "line";
-    private final String message = "message";
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
             GenericArguments.flags()
                 .flag("r", "-remove")
-                .valueFlag(new BoundedIntegerArgument(Text.of(line), 1, 2),"l", "-line")
-                .valueFlag(new TimespanArgument(Text.of(timespan)), "t", "-time")
-                .buildWith(
-                    GenericArguments.optional(GenericArguments.remainingRawJoinedStrings(Text.of(message)))
-                )
+                .valueFlag(new BoundedIntegerArgument(Text.of(this.line), 1, 2),"l", "-line")
+                .valueFlag(NucleusParameters.DURATION, "t", "-time")
+                .buildWith(NucleusParameters.OPTIONAL_MESSAGE)
         };
     }
 
     @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // Get the temporary message item.
-        ServerListGeneralDataModule mod = plugin.getGeneralService().get(ServerListGeneralDataModule.class);
+        ServerListGeneralDataModule mod = Nucleus.getNucleus().getGeneralService().get(ServerListGeneralDataModule.class);
 
         if (args.hasAny("r")) {
             if (mod.getMessage().isPresent()) {
@@ -57,7 +54,7 @@ public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
                 mod.remove();
 
                 // Send message.
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.serverlist.message.removed"));
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.serverlist.message.removed"));
                 return CommandResult.success();
             }
 
@@ -65,9 +62,9 @@ public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
         }
 
         // Which line?
-        boolean linetwo = args.<Integer>getOne(line).map(x -> x == 2).orElse(false);
+        boolean linetwo = args.<Integer>getOne(this.line).map(x -> x == 2).orElse(false);
 
-        Optional<String> onMessage = args.getOne(this.message);
+        Optional<String> onMessage = args.getOne(NucleusParameters.Keys.MESSAGE);
 
         if (!onMessage.isPresent()) {
             boolean isValid = mod.getExpiry().map(x -> x.isAfter(Instant.now())).orElse(false);
@@ -85,10 +82,10 @@ public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
 
             if (newMessage.isPresent()) {
                 // Send message
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.serverlist.message.set"));
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.serverlist.message.set"));
                 src.sendMessage(newMessage.get());
             } else {
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.serverlist.message.empty"));
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.serverlist.message.empty"));
             }
 
             return CommandResult.success();
@@ -97,7 +94,7 @@ public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
         String nMessage = onMessage.get();
 
         // If the expiry is null or before now, and there is no timespan, then it's an hour.
-        Instant endTime = args.<Long>getOne(timespan).map(x -> Instant.now().plus(x, ChronoUnit.SECONDS))
+        Instant endTime = args.<Long>getOne(NucleusParameters.Keys.DURATION).map(x -> Instant.now().plus(x, ChronoUnit.SECONDS))
                 .orElseGet(() -> mod.getExpiry().map(x -> x.isBefore(Instant.now()) ? x.plusSeconds(3600) : x)
                 .orElseGet(() -> Instant.now().plusSeconds(3600)));
 
@@ -113,9 +110,9 @@ public class TemporaryMessageCommand extends AbstractCommand<CommandSource> {
 
         if (newMessage.isPresent()) {
             // Send message
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.serverlist.message.set"));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.serverlist.message.set"));
             src.sendMessage(newMessage.get());
-            src.sendMessage(plugin.getMessageProvider()
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider()
                     .getTextMessageWithFormat("command.serverlist.message.expiry", Util.getTimeToNow(endTime)));
             return CommandResult.success();
         }

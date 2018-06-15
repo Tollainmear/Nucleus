@@ -4,11 +4,9 @@
  */
 package io.github.nucleuspowered.nucleus.modules.kit.listeners;
 
-import com.google.common.collect.Lists;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.events.NucleusFirstJoinEvent;
 import io.github.nucleuspowered.nucleus.api.exceptions.KitRedeemException;
-import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
 import io.github.nucleuspowered.nucleus.dataservices.KitService;
 import io.github.nucleuspowered.nucleus.dataservices.loaders.UserDataManager;
 import io.github.nucleuspowered.nucleus.internal.ListenerBase;
@@ -17,9 +15,6 @@ import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.kit.datamodules.KitUserDataModule;
 import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
-import org.spongepowered.api.data.key.Keys;
-import org.spongepowered.api.entity.Entity;
-import org.spongepowered.api.entity.EntityTypes;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.filter.Getter;
@@ -27,17 +22,15 @@ import org.spongepowered.api.event.filter.cause.Root;
 import org.spongepowered.api.event.filter.type.Exclude;
 import org.spongepowered.api.event.item.inventory.InteractInventoryEvent;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
-import org.spongepowered.api.item.ItemTypes;
 import org.spongepowered.api.item.inventory.Container;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.serializer.TextSerializers;
-import org.spongepowered.api.world.World;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("ALL")
-public class KitListener extends ListenerBase implements Reloadable {
+public class KitListener implements Reloadable, ListenerBase {
 
     private final UserDataManager loader = Nucleus.getNucleus().getUserDataManager();
     private final KitHandler handler = getServiceUnchecked(KitHandler.class);
@@ -80,7 +73,8 @@ public class KitListener extends ListenerBase implements Reloadable {
 
     @Listener
     @Exclude({InteractInventoryEvent.Open.class})
-    public void onPlayerInteractInventory(final InteractInventoryEvent event, @Root final Player player, @Getter("getTargetInventory") final Container inventory) {
+    public void onPlayerInteractInventory(final InteractInventoryEvent event, @Root final Player player,
+            @Getter("getTargetInventory") final Container inventory) {
         handler.getCurrentlyOpenInventoryKit(inventory).ifPresent(x -> {
             try {
                 x.getFirst().updateKitInventory(x.getSecond());
@@ -88,56 +82,26 @@ public class KitListener extends ListenerBase implements Reloadable {
 
                 if (event instanceof InteractInventoryEvent.Close) {
                     gds.save();
-                    player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.edit.success", x.getFirst().getName()));
+                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.edit.success", x.getFirst().getName()));
                     handler.removeKitInventoryFromListener(inventory);
+                    return;
                 }
             } catch (Exception e) {
                 if (Nucleus.getNucleus().isDebugMode()) {
                     e.printStackTrace();
                 }
 
-                player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.edit.error", x.getFirst().getName()));
+                player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.edit.error", x.getFirst().getName()));
             }
         });
 
         if (handler.isViewer(inventory)) {
-            event.setCancelled(true);
+            if (event instanceof InteractInventoryEvent.Close) {
+                this.handler.removeViewer(inventory);
+            } else {
+                event.setCancelled(true);
+            }
         }
-    }
-
-    @Listener
-    public void onPlayerInteractInventoryClose(final InteractInventoryEvent.Close event, @Root final Player player,
-            @Getter("getTargetInventory") final Container inventory) {
-        handler.getCurrentlyOpenInventoryCommandKit(inventory).ifPresent(x -> {
-            // Set the commands.
-            Kit kitInfo = x.getFirst();
-            List<String> c = Lists.newArrayList();
-
-            // For each slot, is it a written book?
-            x.getSecond().slots().forEach(slot -> slot.poll().ifPresent(item -> {
-                if (item.getType().equals(ItemTypes.WRITTEN_BOOK)) {
-                    item.get(Keys.BOOK_PAGES).ifPresent(y -> c.add(fixup(y)));
-                } else if (item.getType().equals(ItemTypes.WRITABLE_BOOK)) {
-                    item.get(Keys.BOOK_PAGES).ifPresent(page -> c.add(getCommandFromText(page)));
-                } else {
-                    // Drop the item.
-                    item.get(Keys.ITEM_BLOCKSTATE).ifPresent(z -> {
-                        World world = player.getLocation().getExtent();
-                        Entity e = world.createEntity(EntityTypes.ITEM, player.getLocation().getPosition());
-                        e.offer(Keys.ITEM_BLOCKSTATE, z);
-                        world.spawnEntity(e);
-                    });
-                }
-
-                kitInfo.setCommands(c);
-                handler.saveKit(kitInfo);
-            }));
-
-            player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.edit.success", kitInfo.getName()));
-            handler.removeKitCommandInventoryFromListener(inventory);
-        });
-
-        handler.removeViewer(inventory);
     }
 
     private String fixup(List<Text> texts) {

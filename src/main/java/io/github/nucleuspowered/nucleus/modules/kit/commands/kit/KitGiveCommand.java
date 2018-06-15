@@ -10,16 +10,15 @@ import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.exceptions.KitRedeemException;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
 import io.github.nucleuspowered.nucleus.api.service.NucleusKitService;
-import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
-import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
+import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
-import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
@@ -37,15 +36,10 @@ import java.util.Map;
 @Permissions(prefix = "kit")
 @RegisterCommand(value = "give", subcommandOf = KitCommand.class)
 @NonnullByDefault
-public class KitGiveCommand extends AbstractCommand<CommandSource> implements Reloadable {
-
-    private final KitHandler kitHandler = getServiceUnchecked(KitHandler.class);
+public class KitGiveCommand extends KitFallbackBase<CommandSource> implements Reloadable {
 
     private boolean mustGetAll;
     private boolean isDrop;
-
-    private final String playerKey = "subject";
-    private final String kitKey = "kit";
 
     @Override protected Map<String, PermissionInformation> permissionSuffixesToRegister() {
         Map<String, PermissionInformation> mspi = Maps.newHashMap();
@@ -55,41 +49,41 @@ public class KitGiveCommand extends AbstractCommand<CommandSource> implements Re
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.flags().permissionFlag(permissions.getPermissionWithSuffix("overridecheck"), "i", "-ignore").buildWith(
-                GenericArguments.none()
-            ),
-            GenericArguments.onlyOne(GenericArguments.player(Text.of(playerKey))),
-            GenericArguments.onlyOne(new KitArgument(Text.of(kitKey), false))
+                GenericArguments.flags().permissionFlag(this.permissions.getPermissionWithSuffix("overridecheck"), "i", "-ignore")
+                    .buildWith(GenericArguments.seq(
+                        NucleusParameters.ONE_PLAYER,
+                        KitFallbackBase.KIT_PARAMETER_NO_PERM_CHECK
+                ))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
 
-        Kit kit = args.<Kit>getOne(this.kitKey).get();
-        Player player = args.<Player>getOne(playerKey).get();
+        Kit kit = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+        Player player = args.<Player>getOne(NucleusParameters.Keys.PLAYER).get();
         boolean skip = args.hasAny("i");
         if (src instanceof Player && player.getUniqueId().equals(((Player) src).getUniqueId())) {
-            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.give.self"));
+            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.give.self"));
         }
 
         Text playerName = Nucleus.getNucleus().getNameUtil().getName(player);
         Text kitName = Text.of(kit.getName());
         try {
-            NucleusKitService.RedeemResult redeemResult = this.kitHandler.redeemKit(kit, player, !skip, this.mustGetAll);
+            NucleusKitService.RedeemResult redeemResult = KIT_HANDLER.redeemKit(kit, player, !skip, this.mustGetAll);
             if (!redeemResult.rejected().isEmpty()) {
                 // If we drop them, tell the user
                 if (this.isDrop) {
-                    player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithTextFormat("command.kit.give.itemsdropped", playerName));
+                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.kit.give.itemsdropped", playerName));
                     redeemResult.rejected().forEach(x -> Util.dropItemOnFloorAtLocation(x, player.getLocation()));
                 } else {
-                    player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithTextFormat("command.kit.give.fullinventory", playerName));
+                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.kit.give.fullinventory", playerName));
                 }
             }
 
-            src.sendMessage(this.plugin.getMessageProvider().getTextMessageWithTextFormat("command.kit.give.spawned", playerName, kitName));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.kit.give.spawned", playerName, kitName));
             if (kit.isDisplayMessageOnRedeem()) {
-                player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.kit.spawned", kit.getName()));
+                player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.spawned", kit.getName()));
             }
 
             return CommandResult.success();
@@ -119,7 +113,7 @@ public class KitGiveCommand extends AbstractCommand<CommandSource> implements Re
     }
 
     @Override
-    public void onReload() throws Exception {
+    public void onReload() {
         KitConfigAdapter kca = getServiceUnchecked(KitConfigAdapter.class);
         this.isDrop = kca.getNodeOrDefault().isDropKitIfFull();
         this.mustGetAll = kca.getNodeOrDefault().isMustGetAll();

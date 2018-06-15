@@ -5,11 +5,12 @@
 package io.github.nucleuspowered.nucleus.modules.item.commands.lore;
 
 import com.google.common.collect.Lists;
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.data.manipulator.mutable.item.LoreData;
 import org.spongepowered.api.data.type.HandTypes;
@@ -24,12 +25,10 @@ import java.util.List;
 @NonnullByDefault
 abstract class LoreSetBaseCommand extends AbstractCommand<Player> {
 
-    final String loreKey = "lore";
-
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.remainingJoinedStrings(Text.of(loreKey))
+                NucleusParameters.LORE
         };
     }
 
@@ -50,7 +49,7 @@ abstract class LoreSetBaseCommand extends AbstractCommand<Player> {
         if (stack.offer(Keys.ITEM_LORE, loreList).isSuccessful()) {
             src.setItemInHand(HandTypes.MAIN_HAND, stack);
 
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.lore.set.success"));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.lore.set.success"));
             return CommandResult.success();
         }
 

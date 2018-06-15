@@ -4,12 +4,12 @@
  */
 package io.github.nucleuspowered.nucleus.modules.inventory.commands;
 
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.Since;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
@@ -21,7 +21,6 @@ import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.item.inventory.Container;
-import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.Map;
@@ -32,8 +31,6 @@ import java.util.Map;
 @Since(minecraftVersion = "1.10.2", spongeApiVersion = "5.0.0", nucleusVersion = "0.13.0")
 @EssentialsEquivalent({"enderchest", "echest", "endersee", "ec"})
 public class EnderChestCommand extends AbstractCommand<Player> {
-
-    private final String player = "subject";
 
     @Override
     protected Map<String, PermissionInformation> permissionSuffixesToRegister() {
@@ -50,19 +47,20 @@ public class EnderChestCommand extends AbstractCommand<Player> {
         return new CommandElement[] {
                 GenericArguments.optional(
                     GenericArguments.requiringPermission(
-                        SelectorWrapperArgument.nicknameSelector(Text.of(player), NicknameArgument.UnderlyingType.PLAYER),
-                        permissions.getPermissionWithSuffix("others")
+                            NucleusParameters.ONE_PLAYER,
+                            this.permissions.getPermissionWithSuffix("others")
                     ))
         };
     }
 
     @Override
     public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
-        Player target = args.<Player>getOne(player).orElse(src);
+        Player target = args.<Player>getOne(NucleusParameters.Keys.PLAYER).orElse(src);
 
         if (!target.getUniqueId().equals(src.getUniqueId())) {
-            if (permissions.testSuffix(target, "exempt.target")) {
-                throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.enderchest.targetexempt", target.getName()));
+            if (this.permissions.testSuffix(target, "exempt.target")) {
+                throw new ReturnMessageException(
+                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.enderchest.targetexempt", target.getName()));
             }
 
             Container container = src.openInventory(target.getEnderChestInventory())
