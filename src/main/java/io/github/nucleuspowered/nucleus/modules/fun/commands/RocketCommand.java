@@ -5,10 +5,12 @@
 package io.github.nucleuspowered.nucleus.modules.fun.commands;
 
 import com.flowpowered.math.vector.Vector3d;
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.argumentparsers.PositiveDoubleArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.Sponge;
@@ -31,27 +33,24 @@ import java.util.concurrent.TimeUnit;
 @Permissions(supportsOthers = true, suggestedLevel = SuggestedLevel.ADMIN)
 public class RocketCommand extends AbstractCommand<CommandSource> {
 
-    private final String arg = "player";
     private final String velocity = "velocity";
 
     @Override
     protected CommandElement[] getArguments() {
-        return new CommandElement[]{
+        return new CommandElement[] {
                 GenericArguments.flags()
                         .flag("h", "-hard")
                         .flag("g", "-g")
                         .valueFlag(new PositiveDoubleArgument(Text.of(this.velocity)), "v", "-velocity")
                         .flag("s", "-silent")
                         .flag("e", "-explosion")
-                        .buildWith(
-                        GenericArguments.optional(GenericArguments.player(Text.of(this.arg)))
-                )
+                        .buildWith(NucleusParameters.ONE_PLAYER)
         };
     }
 
     @Override
     protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Player target = getUserFromArgs(Player.class, src, this.arg, args);
+        Player target = getUserFromArgs(Player.class, src, NucleusParameters.Keys.PLAYER, args);
         boolean isSelf = target.equals(src);
         if (!isSelf && !this.permissions.testOthers(src)) {
             throw ReturnMessageException.fromKey("command.rocket.noothers");
@@ -76,7 +75,7 @@ public class RocketCommand extends AbstractCommand<CommandSource> {
                     .radius((float) v * 2.0f)
                     .build();
             ex.getWorld().triggerExplosion(ex);
-            Sponge.getScheduler().createSyncExecutor(this.plugin)
+            Sponge.getScheduler().createSyncExecutor(Nucleus.getNucleus())
                     .schedule(() ->
                                     ex.getWorld().playSound(SoundTypes.ENTITY_FIREWORK_LAUNCH, target.getLocation().getPosition(), 2),
                             500,
@@ -86,11 +85,11 @@ public class RocketCommand extends AbstractCommand<CommandSource> {
         Vector3d velocity = new Vector3d(0, v, 0);
         target.offer(Keys.VELOCITY, velocity);
         if (!args.hasAny("s")) {
-            target.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.rocket.self"));
+            target.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.rocket.self"));
         }
 
         if (!isSelf) {
-            src.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.rocket.other", target.getName()));
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.rocket.other", target.getName()));
         }
 
         return CommandResult.success();

@@ -24,7 +24,7 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 @Permissions(prefix = "itemname")
 @NonnullByDefault
-@RegisterCommand(value = "set", subcommandOf = ItemNameCommand.class)
+@RegisterCommand(value = "set", subcommandOf = ItemNameCommand.class, rootAliasRegister = { "setitemname", "renameitem" })
 public class ItemNameSetCommand extends AbstractCommand<Player> {
 
     private final String nameKey = "name";
@@ -32,7 +32,7 @@ public class ItemNameSetCommand extends AbstractCommand<Player> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.remainingJoinedStrings(Text.of(nameKey))
+                GenericArguments.remainingJoinedStrings(Text.of(this.nameKey))
         };
     }
 
@@ -44,7 +44,7 @@ public class ItemNameSetCommand extends AbstractCommand<Player> {
         }
 
         ItemStack stack = src.getItemInHand(HandTypes.MAIN_HAND).get();
-        Text name = TextSerializers.FORMATTING_CODE.deserialize(args.<String>getOne(nameKey).get());
+        Text name = TextSerializers.FORMATTING_CODE.deserialize(args.<String>getOne(this.nameKey).get());
 
         if (stack.offer(Keys.DISPLAY_NAME, name).isSuccessful()) {
             src.setItemInHand(HandTypes.MAIN_HAND, stack);

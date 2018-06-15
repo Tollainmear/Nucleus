@@ -57,7 +57,7 @@ public class NicknameUserDataModule extends DataModule.ReferenceService<ModularU
     }
 
     public Optional<Text> getNicknameAsText() {
-        return Optional.ofNullable(nickname);
+        return Optional.ofNullable(this.nickname);
     }
 
     public Optional<String> getNicknameAsString() {
@@ -79,7 +79,7 @@ public class NicknameUserDataModule extends DataModule.ReferenceService<ModularU
 
     public void removeNickname() {
         this.nickname = null;
-        getService().getPlayer().ifPresent(x -> x.remove(Keys.DISPLAY_NAME));
+        getService().getPlayer().ifPresent(x -> x.offer(Keys.DISPLAY_NAME, Text.of(x.getName())));
     }
 
     @Override

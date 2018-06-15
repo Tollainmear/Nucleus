@@ -4,6 +4,8 @@
  */
 package io.github.nucleuspowered.nucleus.modules.nickname.services;
 
+import com.google.common.collect.BiMap;
+import com.google.common.collect.HashBiMap;
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.NameUtil;
 import io.github.nucleuspowered.nucleus.Nucleus;
@@ -22,6 +24,7 @@ import io.github.nucleuspowered.nucleus.modules.nickname.events.ChangeNicknameEv
 import io.github.nucleuspowered.nucleus.util.CauseStackHelper;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.cause.Cause;
 import org.spongepowered.api.service.permission.Subject;
@@ -32,10 +35,13 @@ import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.Tuple;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
@@ -46,6 +52,47 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
     private int max = 16;
     private final Map<String[], Tuple<Matcher, Text>> replacements = Maps.newHashMap();
     private boolean registered = false;
+    private final BiMap<UUID, String> cache = HashBiMap.create();
+    private final BiMap<UUID, Text> textCache = HashBiMap.create();
+
+    public void updateCache(UUID player, Text text) {
+        this.cache.put(player, text.toPlain());
+        this.textCache.put(player, text);
+    }
+
+    public Optional<Player> getFromCache(String text) {
+        UUID u = this.cache.inverse().get(text);
+        if (u != null) {
+            Optional<Player> ret = Sponge.getServer().getPlayer(u);
+            if (!ret.isPresent()) {
+                this.cache.remove(u);
+            }
+
+            return ret;
+        }
+
+        return Optional.empty();
+    }
+
+    public Map<String, UUID> getAllCached() {
+        return Maps.newHashMap(this.cache.inverse());
+    }
+
+    public Map<String, UUID> startsWithGetMap(String text) {
+        return this.cache.inverse().entrySet().stream().filter(x -> x.getKey().startsWith(text.toLowerCase()))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+    }
+
+    public List<UUID> startsWith(String text) {
+        return this.cache.inverse().entrySet().stream().filter(x -> x.getKey().startsWith(text.toLowerCase()))
+                .map(Map.Entry::getValue)
+                .collect(Collectors.toList());
+    }
+
+    public void removeFromCache(UUID player) {
+        this.cache.remove(player);
+        this.textCache.remove(player);
+    }
 
     public void register() {
         if (this.registered) {
@@ -58,12 +105,13 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
         String colPerm = permissions.getPermissionWithSuffix("colour.");
         String colPerm2 = permissions.getPermissionWithSuffix("color.");
 
-        NameUtil.getColours().forEach((key, value) -> replacements.put(new String[]{colPerm + value.getName(), colPerm2 + value.getName()},
+        NameUtil.getColours().forEach((key, value) -> this.replacements.put(new String[]{colPerm + value.getName(), colPerm2 + value.getName()},
                 Tuple.of(Pattern.compile("[&]+" + key.toString().toLowerCase(), Pattern.CASE_INSENSITIVE).matcher(""),
                         mp.getTextMessageWithFormat("command.nick.colour.nopermswith", value.getName()))));
 
         String stylePerm = permissions.getPermissionWithSuffix("style.");
-        NameUtil.getStyleKeys().entrySet().stream().filter(x -> x.getKey() != 'k').forEach((k) -> replacements.put(new String[] { stylePerm + k.getValue().toLowerCase() },
+        NameUtil.getStyleKeys().entrySet().stream().filter(x -> x.getKey() != 'k').forEach((k) -> this.replacements
+                .put(new String[] { stylePerm + k.getValue().toLowerCase() },
                 Tuple.of(Pattern.compile("[&]+" + k.getKey().toString().toLowerCase(), Pattern.CASE_INSENSITIVE).matcher(""),
                         mp.getTextMessageWithFormat("command.nick.style.nopermswith", k.getValue().toLowerCase()))));
 
@@ -75,6 +123,9 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
 
     @Override
     public Optional<Text> getNickname(User user) {
+        if (user.isOnline()) {
+            return Optional.ofNullable(this.textCache.get(user.getUniqueId()));
+        }
         return Nucleus.getNucleus().getUserDataManager().get(user).map(x -> x.get(NicknameUserDataModule.class).getNicknameAsText().orElse(null));
     }
 
@@ -109,6 +160,7 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
                                 .getTextMessageWithFormat("standard.error.nouser"),
                         NicknameException.Type.NO_USER
                 )).get(NicknameUserDataModule.class).removeNickname();
+        removeFromCache(user.getUniqueId());
 
         if (user.isOnline()) {
             user.getPlayer().ifPresent(x ->
@@ -153,16 +205,16 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
                 stripPermissionless(os.get(), nickname);
             }
 
-            if (!pattern.matcher(plain).matches()) {
+            if (!this.pattern.matcher(plain).matches()) {
                 throw new NicknameException(
-                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nick.nopattern", pattern.pattern()),
+                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nick.nopattern", this.pattern.pattern()),
                         NicknameException.Type.INVALID_PATTERN);
             }
 
             int strippedNameLength = plain.length();
 
             // Do a regex remove to check minimum length requirements.
-            if (strippedNameLength < Math.max(min, 1)) {
+            if (strippedNameLength < Math.max(this.min, 1)) {
                 throw new NicknameException(
                         Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nick.tooshort"),
                         NicknameException.Type.TOO_SHORT
@@ -170,7 +222,7 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
             }
 
             // Do a regex remove to check maximum length requirements. Will be at least the minimum length
-            if (strippedNameLength > Math.max(max, min)) {
+            if (strippedNameLength > Math.max(this.max, this.min)) {
                 throw new NicknameException(
                         Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nick.toolong"),
                         NicknameException.Type.TOO_SHORT
@@ -194,6 +246,7 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
         mus.set(nicknameUserDataModule);
         mus.save();
         Text set = nicknameUserDataModule.getNicknameAsText().get();
+        this.updateCache(pl.getUniqueId(), nickname);
 
         if (pl.isOnline()) {
             pl.getPlayer().get().sendMessage(Text.builder().append(
@@ -205,15 +258,15 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
     @Override
     public void onReload() {
         NicknameConfig nc = Nucleus.getNucleus().getConfigAdapter(NicknameModule.ID, NicknameConfigAdapter.class).get().getNodeOrDefault();
-        pattern = nc.getPattern();
-        min = nc.getMinNicknameLength();
-        max = nc.getMaxNicknameLength();
+        this.pattern = nc.getPattern();
+        this.min = nc.getMinNicknameLength();
+        this.max = nc.getMaxNicknameLength();
     }
 
     private void stripPermissionless(Subject source, Text message) throws NicknameException {
         String m = TextSerializers.FORMATTING_CODE.serialize(message);
         if (m.contains("&")) {
-            for (Map.Entry<String[], Tuple<Matcher, Text>> r : replacements.entrySet()) {
+            for (Map.Entry<String[], Tuple<Matcher, Text>> r : this.replacements.entrySet()) {
                 // If we don't have the required permission...
                 if (r.getValue().getFirst().reset(m).find() && Arrays.stream(r.getKey()).noneMatch(source::hasPermission)) {
                     // throw

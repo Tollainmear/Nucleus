@@ -6,20 +6,18 @@ package io.github.nucleuspowered.nucleus.modules.jail.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
-import io.github.nucleuspowered.nucleus.argumentparsers.JailArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.TimespanArgument;
 import io.github.nucleuspowered.nucleus.internal.LocationData;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
+import io.github.nucleuspowered.nucleus.modules.jail.JailParameters;
 import io.github.nucleuspowered.nucleus.modules.jail.config.JailConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.jail.data.JailData;
 import io.github.nucleuspowered.nucleus.modules.jail.handlers.JailHandler;
@@ -29,7 +27,6 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MutableMessageChannel;
@@ -52,10 +49,6 @@ public class JailCommand extends AbstractCommand<CommandSource> implements Reloa
 
     private final JailHandler handler = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(JailHandler.class);
 
-    private final String playerKey = "subject";
-    private final String jailKey = "jail";
-    private final String durationKey = "duration";
-    private final String reasonKey = "reason";
     private boolean requireUnjailPermission = false;
 
     @Override
@@ -73,29 +66,30 @@ public class JailCommand extends AbstractCommand<CommandSource> implements Reloa
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.onlyOne(SelectorWrapperArgument.nicknameSelector(Text.of(playerKey), NicknameArgument.UnderlyingType.USER)),
-            GenericArguments.optional(GenericArguments.onlyOne(new JailArgument(Text.of(jailKey), handler))),
-            GenericArguments.optionalWeak(GenericArguments.onlyOne(new TimespanArgument(Text.of(durationKey)))),
-            GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(reasonKey))))};
+                NucleusParameters.ONE_USER,
+                JailParameters.OPTIONAL_JAIL,
+                NucleusParameters.OPTIONAL_WEAK_DURATION,
+                NucleusParameters.OPTIONAL_REASON
+        };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // Get the subject.
-        User pl = args.<User>getOne(playerKey).get();
-        if (!pl.isOnline() && !permissions.testSuffix(src, "offline")) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jail.offline.noperms"));
+        User pl = args.<User>getOne(NucleusParameters.Keys.USER).get();
+        if (!pl.isOnline() && !this.permissions.testSuffix(src, "offline")) {
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jail.offline.noperms"));
             return CommandResult.empty();
         }
 
-        if (handler.isPlayerJailed(pl)) {
-            if (!this.requireUnjailPermission || permissions.testSuffix(src, "unjail")) {
+        if (this.handler.isPlayerJailed(pl)) {
+            if (!this.requireUnjailPermission || this.permissions.testSuffix(src, "unjail")) {
                 return onUnjail(src, args, pl);
             }
 
             throw ReturnMessageException.fromKey("command.jail.unjail.perm");
         } else {
-            if (permissions.testSuffix(pl, "exempt.target", src, false)) { // only for jailing
+            if (this.permissions.testSuffix(pl, "exempt.target", src, false)) { // only for jailing
                 throw ReturnMessageException.fromKey("command.jail.exempt", pl.getName());
             }
 
@@ -104,8 +98,8 @@ public class JailCommand extends AbstractCommand<CommandSource> implements Reloa
     }
 
     private CommandResult onUnjail(CommandSource src, CommandContext args, User user) throws ReturnMessageException {
-        if (CauseStackHelper.createFrameWithCausesWithReturn(c -> handler.unjailPlayer(user), src)) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jail.unjail.success", user.getName()));
+        if (CauseStackHelper.createFrameWithCausesWithReturn(c -> this.handler.unjailPlayer(user), src)) {
+            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jail.unjail.success", user.getName()));
             return CommandResult.success();
         } else {
             throw ReturnMessageException.fromKey("command.jail.unjail.fail", user.getName());
@@ -113,14 +107,15 @@ public class JailCommand extends AbstractCommand<CommandSource> implements Reloa
     }
 
     private CommandResult onJail(CommandSource src, CommandContext args, User user) throws ReturnMessageException {
-        Optional<LocationData> owl = args.getOne(jailKey);
+        Optional<LocationData> owl = args.getOne(JailParameters.JAIL_KEY);
         if (!owl.isPresent()) {
             throw ReturnMessageException.fromKey("command.jail.jail.nojail");
         }
 
         // This might not be there.
-        Optional<Long> duration = args.getOne(durationKey);
-        String reason = args.<String>getOne(reasonKey).orElse(plugin.getMessageProvider().getMessageWithFormat("command.jail.reason"));
+        Optional<Long> duration = args.getOne(NucleusParameters.Keys.DURATION);
+        String reason = args.<String>getOne(NucleusParameters.Keys.REASON)
+                .orElseGet(() -> Nucleus.getNucleus().getMessageProvider().getMessageWithFormat("command.jail.reason"));
         JailData jd;
         Text message;
         Text messageTo;
@@ -133,25 +128,26 @@ public class JailCommand extends AbstractCommand<CommandSource> implements Reloa
                 jd = new JailData(Util.getUUID(src), owl.get().getName(), reason, null, Duration.of(duration.get(), ChronoUnit.SECONDS));
             }
 
-            message = plugin.getMessageProvider().getTextMessageWithFormat("command.checkjail.jailedfor", user.getName(), jd.getJailName(),
+            message = Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.checkjail.jailedfor", user.getName(), jd.getJailName(),
                     src.getName(), Util.getTimeStringFromSeconds(duration.get()));
-            messageTo = plugin.getMessageProvider().getTextMessageWithFormat("command.jail.jailedfor", owl.get().getName(), src.getName(),
+            messageTo = Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jail.jailedfor", owl.get().getName(), src.getName(),
                     Util.getTimeStringFromSeconds(duration.get()));
         } else {
             jd = new JailData(Util.getUUID(src), owl.get().getName(), reason, user.getPlayer().map(Locatable::getLocation).orElse(null));
-            message = plugin.getMessageProvider().getTextMessageWithFormat("command.checkjail.jailedperm", user.getName(), owl.get().getName(), src.getName());
-            messageTo = plugin.getMessageProvider().getTextMessageWithFormat("command.jail.jailedperm", owl.get().getName(), src.getName());
+            message = Nucleus.getNucleus()
+                    .getMessageProvider().getTextMessageWithFormat("command.checkjail.jailedperm", user.getName(), owl.get().getName(), src.getName());
+            messageTo = Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jail.jailedperm", owl.get().getName(), src.getName());
         }
 
-        if (handler.jailPlayer(user, jd)) {
-            MutableMessageChannel mc = new PermissionMessageChannel(permissions.getPermissionWithSuffix("notify")).asMutable();
+        if (this.handler.jailPlayer(user, jd)) {
+            MutableMessageChannel mc = new PermissionMessageChannel(this.permissions.getPermissionWithSuffix("notify")).asMutable();
             mc.addMember(src);
             mc.send(message);
-            mc.send(plugin.getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", reason));
+            mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", reason));
 
             user.getPlayer().ifPresent(x -> {
                 x.sendMessage(messageTo);
-                x.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", reason));
+                x.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", reason));
             });
 
             return CommandResult.success();

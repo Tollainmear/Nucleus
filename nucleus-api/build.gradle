@@ -51,12 +51,18 @@ task sourcesJar(type: Jar, dependsOn: classes) {
     from sourceSets.main.allSource
 }
 
+def getRootVersion = {
+    rootProject.version
+}
+
 jar {
     manifest {
-        attributes  'Implementation-Title': project.name,
-                'Implementation-Version': project.getRootProject().version,
+        attributes  'API-Title': project.name,
+                'Implementation-Title': rootProject.name,
+                'API-Version': project.version,
                 'SpongeAPI-Version': project.spongeapi,
-                'Git-Hash': project.getRootProject().getGitHash()
+                'Implementation-Version': getRootVersion(),
+                'Git-Hash': gitHash.hash
     }
 
     archiveName = "Nucleus-${version}-api.jar"
@@ -69,10 +75,10 @@ artifacts {
 }
 
 blossom {
-    def location = 'src/main/java/io/github/nucleuspowered/nucleus/api/NucleusAPITokens.java'
-
-    replaceToken '@version@', rootProject.version, location
-    replaceToken '@semver@', versionno, location
-    replaceToken '@release@', suffix, location
-    replaceToken '@description@', description, location
+    replaceTokenIn('src/main/java/io/github/nucleuspowered/nucleus/api/NucleusAPITokens.java')
+    replaceToken '@semver@', versionno
+    replaceToken '@release@', suffix
+    replaceToken '@version@', version
+    replaceToken '@description@', description
+    replaceToken '@gitHash@', gitHash.hash
 }

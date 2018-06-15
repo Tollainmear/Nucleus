@@ -12,6 +12,7 @@ import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.List;
@@ -29,6 +30,9 @@ public class NoModifiersArgument<T> extends WrappedElement {
     public static final BiPredicate<CommandSource, Player> PLAYER_NOT_CALLER_PREDICATE =
         (c, o) -> !(c instanceof Player) || !((Player) c).getUniqueId().equals(o.getUniqueId());
 
+    public static final BiPredicate<CommandSource, User> USER_NOT_CALLER_PREDICATE =
+            (c, o) -> !(c instanceof Player) || !((User) c).getUniqueId().equals(o.getUniqueId());
+
     private final BiPredicate<CommandSource, T> test;
     private final List<String> argsToPut = Lists.newArrayList();
 
@@ -43,19 +47,19 @@ public class NoModifiersArgument<T> extends WrappedElement {
         this.test = test == null ? (c, o) -> true : test;
 
         if (isNoCooldown) {
-            argsToPut.add(NO_COOLDOWN_ARGUMENT);
+            this.argsToPut.add(NO_COOLDOWN_ARGUMENT);
         }
 
         if (isNoCost) {
-            argsToPut.add(NO_COST_ARGUMENT);
+            this.argsToPut.add(NO_COST_ARGUMENT);
         }
 
         if (isNoWarmup) {
-            argsToPut.add(NO_WARMUP_ARGUMENT);
+            this.argsToPut.add(NO_WARMUP_ARGUMENT);
         }
     }
 
-    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
+    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) {
         return null;
     }
 
@@ -63,8 +67,8 @@ public class NoModifiersArgument<T> extends WrappedElement {
         getWrappedElement().parse(source, args, context);
 
         // We'll get here if there are no exceptions thrown.
-        if (getKey() != null && context.hasAny(getKey()) && context.<T>getOne(getKey()).map(x -> test.test(source, x)).orElse(false)) {
-            argsToPut.forEach(x -> context.putArg(x, true));
+        if (getKey() != null && context.hasAny(getKey()) && context.<T>getOne(getKey()).map(x -> this.test.test(source, x)).orElse(false)) {
+            this.argsToPut.forEach(x -> context.putArg(x, true));
         }
     }
 

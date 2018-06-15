@@ -7,6 +7,7 @@ package io.github.nucleuspowered.nucleus.internal;
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.PluginInfo;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.PermissionsFrom;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -21,25 +22,36 @@ public class PermissionRegistry {
     private final Map<String, PermissionInformation> otherPermissions = Maps.newHashMap();
 
     public CommandPermissionHandler getPermissionsForNucleusCommand(Class<? extends AbstractCommand> command) {
-        return serviceRegistry.getOrDefault(command, new CommandPermissionHandler(command, Nucleus.getNucleus()));
+        if (this.serviceRegistry.containsKey(command)) {
+            return this.serviceRegistry.get(command);
+        }
+
+        PermissionsFrom p = command.getAnnotation(PermissionsFrom.class);
+        if (p != null && p.value() != AbstractCommand.class) {
+            return getPermissionsForNucleusCommand(p.value());
+        }
+
+        CommandPermissionHandler handler = new CommandPermissionHandler(command, Nucleus.getNucleus());
+        this.serviceRegistry.put(command, handler);
+        return handler;
     }
 
     public void addHandler(Class<? extends AbstractCommand> cb, CommandPermissionHandler cph) {
-        if (serviceRegistry.containsKey(cb)) {
+        if (this.serviceRegistry.containsKey(cb)) {
             // Silently discard.
             return;
         }
 
-        serviceRegistry.put(cb, cph);
+        this.serviceRegistry.put(cb, cph);
     }
 
     public void registerOtherPermission(String otherPermission, PermissionInformation pi) {
-        if (otherPermissions.containsKey(otherPermission)) {
+        if (this.otherPermissions.containsKey(otherPermission)) {
             // Silently discard.
             return;
         }
 
-        otherPermissions.put(otherPermission, pi);
+        this.otherPermissions.put(otherPermission, pi);
     }
 
     public void registerOtherPermission(String otherPermission, String description, SuggestedLevel level) {
@@ -48,8 +60,8 @@ public class PermissionRegistry {
 
     public Map<String, PermissionInformation> getPermissions() {
         Map<String, PermissionInformation> m = new HashMap<>();
-        serviceRegistry.values().forEach(x -> m.putAll(x.getSuggestedPermissions()));
-        m.putAll(otherPermissions);
+        this.serviceRegistry.values().forEach(x -> m.putAll(x.getSuggestedPermissions()));
+        m.putAll(this.otherPermissions);
         return m;
     }
 }

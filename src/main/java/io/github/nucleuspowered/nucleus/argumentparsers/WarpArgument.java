@@ -4,7 +4,7 @@
  */
 package io.github.nucleuspowered.nucleus.argumentparsers;
 
-import com.google.common.collect.Lists;
+import com.google.common.collect.ImmutableList;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Warp;
 import io.github.nucleuspowered.nucleus.api.service.NucleusWarpService;
@@ -22,7 +22,9 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.List;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
@@ -35,17 +37,11 @@ public class WarpArgument extends CommandElement implements Reloadable, Internal
 
     private NucleusWarpService service;
     private final boolean permissionCheck;
-    private final boolean requiresLocation;
     private boolean separate = true;
 
     public WarpArgument(@Nullable Text key, boolean permissionCheck) {
-        this(key, permissionCheck, true);
-    }
-
-    public WarpArgument(@Nullable Text key, boolean permissionCheck, boolean requiresLocation) {
         super(key);
         this.permissionCheck = permissionCheck;
-        this.requiresLocation = requiresLocation;
         if (this.permissionCheck) {
             Nucleus.getNucleus().registerReloadable(this);
         }
@@ -66,7 +62,7 @@ public class WarpArgument extends CommandElement implements Reloadable, Internal
             throw args.createError(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("args.warps.noexist"));
         }
 
-        if (!checkPermission(source, warpName) && !checkPermission(source, warpName.toLowerCase())) {
+        if (this.permissionCheck && this.separate && !checkPermission(source, warpName) && !checkPermission(source, warpName.toLowerCase())) {
             throw args.createError(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("args.warps.noperms"));
         }
 
@@ -78,20 +74,33 @@ public class WarpArgument extends CommandElement implements Reloadable, Internal
         getService();
 
         try {
-            String name = args.peek().toLowerCase();
-            return service.getWarpNames().stream().filter(s -> s.startsWith(name))
-                .filter(s -> !requiresLocation || service.getWarp(s).get().getLocation().isPresent())
-                .filter(x -> checkPermission(src, name)).collect(Collectors.toList());
+            String el = args.peek();
+            String name = el.toLowerCase();
+            List<String> elements = this.service.getWarpNames().stream()
+                    .filter(s -> s.startsWith(name))
+                    .limit(21).collect(Collectors.toList());
+            if (elements.size() >= 21) {
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("args.warps.maxselect", el));
+                return ImmutableList.of(el);
+            } else if (elements.isEmpty()) {
+                return ImmutableList.of();
+            } else if (!this.permissionCheck) { // permissioncheck and requires location were always the same
+                return elements;
+            }
+
+            Predicate<String> predicate = s -> this.service.getWarp(s).get().getLocation().isPresent();
+
+            if (this.separate) {
+                predicate.and(x -> checkPermission(src, x));
+            }
+
+            return elements.stream().filter(predicate::test).collect(Collectors.toList());
         } catch (ArgumentParseException e) {
-            return Lists.newArrayList();
+            return ImmutableList.of();
         }
     }
 
     private boolean checkPermission(CommandSource src, String name) {
-        if (!this.permissionCheck || !this.separate) {
-            return true;
-        }
-
         // No permissions, no entry!
         return src.hasPermission(PermissionRegistry.PERMISSIONS_PREFIX + "warps." + name.toLowerCase());
     }

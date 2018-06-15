@@ -4,21 +4,20 @@
  */
 package io.github.nucleuspowered.nucleus.modules.kit.commands.kit;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
-import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.Since;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
-import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
+import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -29,21 +28,19 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @RunAsync
 @RegisterCommand(value = "info", subcommandOf = KitCommand.class)
 @Since(spongeApiVersion = "7.0", minecraftVersion = "1.12.1", nucleusVersion = "1.2")
-public class KitInfoCommand extends AbstractCommand<CommandSource> {
-
-    private final String kitName = "kit";
+public class KitInfoCommand extends KitFallbackBase<CommandSource> {
 
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.onlyOne(new KitArgument(Text.of(kitName), false))
+                KitFallbackBase.KIT_PARAMETER_NO_PERM_CHECK
         };
     }
 
     @Override
-    protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Kit kit = args.<Kit>getOne(kitName).get();
-        MessageProvider mp = this.plugin.getMessageProvider();
+    protected CommandResult executeCommand(CommandSource src, CommandContext args) {
+        Kit kit = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+        MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
         Util.getPaginationBuilder(src).title(mp.getTextMessageWithFormat("command.kit.info.title", kit.getName()))
                 .contents(
                         addViewHover(mp, kit),

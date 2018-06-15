@@ -5,7 +5,6 @@
 package io.github.nucleuspowered.nucleus.modules.core.commands.itemalias;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
-import io.github.nucleuspowered.nucleus.argumentparsers.SimpleProviderChoicesArgument;
 import io.github.nucleuspowered.nucleus.configurate.datatypes.ItemDataNode;
 import io.github.nucleuspowered.nucleus.dataservices.ItemDataService;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
@@ -21,6 +20,8 @@ import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
+import java.util.function.Function;
+
 @RunAsync
 @NoModifiers
 @Permissions(prefix = "nucleus.itemalias")
@@ -34,19 +35,20 @@ public class RemoveItemAliasCommand extends AbstractCommand<CommandSource> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.onlyOne(SimpleProviderChoicesArgument.withSetSupplier(Text.of(alias), itemDataService::getAliases))
+            GenericArguments.onlyOne(
+                    GenericArguments.choices(Text.of(this.alias), this.itemDataService::getAliases, Function.identity()))
         };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        String al = args.<String>getOne(alias).get();
-        String id = itemDataService.getIdFromAlias(al).get();
-        ItemDataNode node = itemDataService.getDataForItem(id);
+    public CommandResult executeCommand(CommandSource src, CommandContext args) {
+        String al = args.<String>getOne(this.alias).get();
+        String id = this.itemDataService.getIdFromAlias(al).get();
+        ItemDataNode node = this.itemDataService.getDataForItem(id);
         node.removeAlias(al);
-        itemDataService.setDataForItem(id, node);
+        this.itemDataService.setDataForItem(id, node);
 
-        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.removeitemalias.removed", al, id));
+        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.removeitemalias.removed", al, id));
         return CommandResult.success();
     }
 }

@@ -4,13 +4,13 @@
  */
 package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
-import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateFactory;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateMessageSender;
@@ -18,9 +18,6 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
-import org.spongepowered.api.command.args.GenericArguments;
-import org.spongepowered.api.entity.living.player.Player;
-import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 @RunAsync
@@ -29,24 +26,23 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @RegisterCommand({"tellplain", "plaintell", "ptell"})
 @NonnullByDefault
 public class TellPlainCommand extends AbstractCommand<CommandSource> {
-    private final String target = "target";
-    private final String message = "message";
 
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            SelectorWrapperArgument.nicknameSelector(Text.of(this.target), NicknameArgument.UnderlyingType.PLAYER_CONSOLE, false, Player.class),
-            GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(message)))
+                NucleusParameters.MANY_PLAYER_OR_CONSOLE,
+                NucleusParameters.MESSAGE
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         try {
-            new NucleusTextTemplateMessageSender(NucleusTextTemplateFactory.createFromString(args.<String>getOne(message).get()), src)
-                    .send(args.getAll(target));
+            new NucleusTextTemplateMessageSender(NucleusTextTemplateFactory.createFromString(
+                        args.<String>getOne(NucleusParameters.Keys.MESSAGE).get()), src)
+                    .send(args.getAll(NucleusParameters.Keys.PLAYER_OR_CONSOLE));
         } catch (Throwable throwable) {
-            if (plugin.isDebugMode()) {
+            if (Nucleus.getNucleus().isDebugMode()) {
                 throwable.printStackTrace();
             }
 

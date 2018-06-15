@@ -4,15 +4,16 @@
  */
 package io.github.nucleuspowered.nucleus.modules.warp.commands;
 
+import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Warp;
-import io.github.nucleuspowered.nucleus.argumentparsers.RemainingStringsArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.WarpArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
+import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
+import io.github.nucleuspowered.nucleus.modules.warp.WarpParameters;
 import io.github.nucleuspowered.nucleus.modules.warp.handlers.WarpHandler;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -30,41 +31,41 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @RegisterCommand(value = {"setdescription"}, subcommandOf = WarpCommand.class)
 public class SetDescriptionCommand extends AbstractCommand<CommandSource> {
 
-    private final String warpKey = "warp";
-    private final String descriptionKey = "description";
     private final WarpHandler handler = getServiceUnchecked(WarpHandler.class);
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
             GenericArguments.flags().flag("r", "-remove", "-delete").buildWith(
                 GenericArguments.seq(
-                    new WarpArgument(Text.of(warpKey), false, false),
-                    GenericArguments.optional(new RemainingStringsArgument(Text.of(descriptionKey)))
+                        WarpParameters.WARP_NO_PERM,
+                        NucleusParameters.OPTIONAL_DESCRIPTION
                 )
             )
         };
     }
 
     @Override public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        String warpName = args.<Warp>getOne(warpKey).get().getName();
+        String warpName = args.<Warp>getOne(WarpParameters.WARP_KEY).get().getName();
         if (args.hasAny("r")) {
             // Remove the desc.
-            if (handler.setWarpDescription(warpName, null)) {
-                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.warp.description.removed", warpName));
+            if (this.handler.setWarpDescription(warpName, null)) {
+                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.warp.description.removed", warpName));
                 return CommandResult.success();
             }
 
-            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.warp.description.noremove", warpName));
+            throw new ReturnMessageException(Nucleus
+                    .getNucleus().getMessageProvider().getTextMessageWithFormat("command.warp.description.noremove", warpName));
         }
 
         // Add the category.
-        Text message = TextSerializers.FORMATTING_CODE.deserialize(args.<String>getOne(descriptionKey).get());
-        if (handler.setWarpDescription(warpName, message)) {
-            src.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat("command.warp.description.added", message, Text.of(warpName)));
+        Text message = TextSerializers.FORMATTING_CODE.deserialize(args.<String>getOne(NucleusParameters.Keys.DESCRIPTION).get());
+        if (this.handler.setWarpDescription(warpName, message)) {
+            src.sendMessage(
+                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.warp.description.added", message, Text.of(warpName)));
             return CommandResult.success();
         }
 
-        throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithTextFormat("command.warp.description.couldnotadd",
+        throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.warp.description.couldnotadd",
                 Text.of(warpName)));
     }
 }
