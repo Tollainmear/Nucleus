@@ -17,10 +17,10 @@ public class WarmupConfig {
     private boolean onCommand = true;
 
     public boolean isOnMove() {
-        return this.onMove;
+        return onMove;
     }
 
     public boolean isOnCommand() {
-        return this.onCommand;
+        return onCommand;
     }
 }

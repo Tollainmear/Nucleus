@@ -11,6 +11,7 @@ import io.github.nucleuspowered.nucleus.modules.chat.config.ChatConfig;
 import io.github.nucleuspowered.nucleus.modules.chat.config.ChatConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.chat.config.ChatTemplateConfig;
 import io.github.nucleuspowered.nucleus.modules.chat.config.WeightedChatTemplateConfig;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.service.context.Contextual;
 import org.spongepowered.api.service.permission.Subject;
@@ -25,6 +26,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
@@ -86,7 +88,7 @@ public class TemplateUtil implements Reloadable {
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         try {
             this.config = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(ChatConfigAdapter.class).getNodeOrDefault();
             if (!this.currentlyReloading.get()) {

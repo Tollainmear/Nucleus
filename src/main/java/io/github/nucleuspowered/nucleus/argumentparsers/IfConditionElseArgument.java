@@ -34,7 +34,7 @@ public class IfConditionElseArgument extends CommandElement {
         this.predicate = predicate;
     }
 
-    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) {
+    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
         return null;
     }
 

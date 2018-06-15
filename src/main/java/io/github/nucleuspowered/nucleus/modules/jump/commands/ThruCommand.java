@@ -31,7 +31,7 @@ public class ThruCommand extends AbstractCommand<Player> implements Reloadable {
     // Original code taken from EssentialCmds. With thanks to 12AwsomeMan34 for
     // the initial contribution.
     @Override
-    public CommandResult executeCommand(Player player, CommandContext args) {
+    public CommandResult executeCommand(Player player, CommandContext args) throws Exception {
         BlockRay<World> playerBlockRay = BlockRay.from(player).distanceLimit(this.maxThru).build();
         World world = player.getWorld();
 
@@ -45,7 +45,7 @@ public class ThruCommand extends AbstractCommand<Player> implements Reloadable {
 
         // Even if we did find a wall, no good if we are at the end of the ray.
         if (!playerBlockRay.hasNext()) {
-            player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.thru.nowall"));
+            player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.thru.nowall"));
             return CommandResult.empty();
         }
 
@@ -53,28 +53,28 @@ public class ThruCommand extends AbstractCommand<Player> implements Reloadable {
             BlockRayHit<World> b = playerBlockRay.next();
             if (player.getWorld().getBlockType(b.getBlockPosition()).equals(BlockTypes.AIR)) {
                 if (!Util.isLocationInWorldBorder(b.getLocation())) {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jump.outsideborder"));
+                    player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jump.outsideborder"));
                     return CommandResult.empty();
                 }
 
                 // If we can go, do so.
                 if (Nucleus.getNucleus().getTeleportHandler()
                         .teleportPlayer(player, b.getLocation(), NucleusTeleportHandler.StandardTeleportMode.SAFE_TELEPORT).isSuccess()) {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.thru.success"));
+                    player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.thru.success"));
                     return CommandResult.success();
                 } else {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.thru.notsafe"));
+                    player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.thru.notsafe"));
                     return CommandResult.empty();
                 }
             }
         } while (playerBlockRay.hasNext());
 
-        player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.thru.nospot"));
+        player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.thru.nospot"));
         return CommandResult.empty();
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         this.maxThru = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(JumpConfigAdapter.class).getNodeOrDefault().getMaxThru();
     }
 

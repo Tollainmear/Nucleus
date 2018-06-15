@@ -27,7 +27,7 @@ public class JailUserDataModule extends DataModule.ReferenceService<ModularUserS
     }
 
     public Optional<JailData> getJailData() {
-        return Optional.ofNullable(this.jailData);
+        return Optional.ofNullable(jailData);
     }
 
     public void setJailData(@Nullable JailData jailData) {
@@ -35,15 +35,15 @@ public class JailUserDataModule extends DataModule.ReferenceService<ModularUserS
     }
 
     public boolean jailOnNextLogin() {
-        return this.jailOnNextLogin;
+        return jailOnNextLogin;
     }
 
     public void setJailOnNextLogin(boolean set) {
-        this.jailOnNextLogin = set && !getService().getPlayer().isPresent();
+        jailOnNextLogin = set && !getService().getPlayer().isPresent();
     }
 
     public void removeJailData() {
-        this.jailOnNextLogin = false;
+        jailOnNextLogin = false;
         setJailData(null);
     }
 }

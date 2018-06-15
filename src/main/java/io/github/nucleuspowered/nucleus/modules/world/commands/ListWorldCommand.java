@@ -81,22 +81,22 @@ public class ListWorldCommand extends AbstractCommand<CommandSource> {
         listContent.add(plugin.getMessageProvider().getTextMessageWithFormat("command.world.list.params2",
             String.valueOf(x.isHardcore()),
             String.valueOf(x.loadOnStartup()),
-            String.valueOf(x.isPVPEnabled()),
-            String.valueOf(x.doesKeepSpawnLoaded())
+            String.valueOf(x.doesKeepSpawnLoaded()),
+            String.valueOf(x.isPVPEnabled())
         ));
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // Get all the worlds
         Collection<WorldProperties> cwp = Sponge.getServer().getAllWorldProperties();
         final List<Text> listContent = Lists.newArrayList();
 
-        final boolean canSeeSeeds = this.permissions.testSuffix(src, "seed");
+        final boolean canSeeSeeds = permissions.testSuffix(src, "seed");
         cwp.stream().sorted(Comparator.comparing(WorldProperties::getWorldName)).forEach(x -> getWorldInfo(listContent, x, canSeeSeeds));
 
         Util.getPaginationBuilder(src)
-            .contents(listContent).title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.list.title"))
+            .contents(listContent).title(plugin.getMessageProvider().getTextMessageWithFormat("command.world.list.title"))
             .sendTo(src);
 
         return CommandResult.success();

@@ -71,26 +71,26 @@ public class MessageHandler implements NucleusPrivateMessagingService {
 
     public MessageHandler() throws Exception {
         Nucleus nucleus = Nucleus.getNucleus();
-        this.textParsingUtils = nucleus.getTextParsingUtils();
-        this.ucl = nucleus.getUserDataManager();
-        this.mca = nucleus.getModuleContainer().getConfigAdapterForModule(MessageModule.ID, MessageConfigAdapter.class);
-        this.messagepermissions = nucleus.getPermissionRegistry().getPermissionsForNucleusCommand(MessageCommand.class);
-        this.socialspypermissions = nucleus.getPermissionRegistry().getPermissionsForNucleusCommand(SocialSpyCommand.class);
+        textParsingUtils = nucleus.getTextParsingUtils();
+        ucl = nucleus.getUserDataManager();
+        mca = nucleus.getModuleContainer().getConfigAdapterForModule(MessageModule.ID, MessageConfigAdapter.class);
+        messagepermissions = nucleus.getPermissionRegistry().getPermissionsForNucleusCommand(MessageCommand.class);
+        socialspypermissions = nucleus.getPermissionRegistry().getPermissionsForNucleusCommand(SocialSpyCommand.class);
         onReload();
     }
 
     public void onReload() {
-        this.messageConfig = this.mca.getNodeOrDefault();
-        this.useLevels = this.messageConfig.isSocialSpyLevels();
-        this.sameLevel = this.messageConfig.isSocialSpySameLevel();
-        this.serverLevel = this.messageConfig.getServerLevel();
+        messageConfig = mca.getNodeOrDefault();
+        useLevels = messageConfig.isSocialSpyLevels();
+        sameLevel = messageConfig.isSocialSpySameLevel();
+        serverLevel = messageConfig.getServerLevel();
     }
 
     @Override
     public boolean isSocialSpy(User user) {
         Tristate ts = forcedSocialSpyState(user);
         if (ts == Tristate.UNDEFINED) {
-            return this.ucl.get(user).map(y -> y.get(MessageUserDataModule.class).isSocialSpy()).orElse(false);
+            return ucl.get(user).map(y -> y.get(MessageUserDataModule.class).isSocialSpy()).orElse(false);
         }
 
         return ts.asBoolean();
@@ -105,7 +105,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     @Override public int getCustomTargetLevel() {
-        return this.messageConfig.getCustomTargetLevel();
+        return messageConfig.getCustomTargetLevel();
     }
 
     @Override public int getServerLevel() {
@@ -113,12 +113,12 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     @Override public int getSocialSpyLevel(User user) {
-        return this.useLevels ? Util.getPositiveIntOptionFromSubject(user, socialSpyOption).orElse(0) : 0;
+        return useLevels ? Util.getPositiveIntOptionFromSubject(user, socialSpyOption).orElse(0) : 0;
     }
 
     @Override public Tristate forcedSocialSpyState(User user) {
-        if (this.socialspypermissions.testSuffix(user, "base")) {
-            if (this.messageConfig.isSocialSpyAllowForced() && this.socialspypermissions.testSuffix(user, "force")) {
+        if (socialspypermissions.testSuffix(user, "base")) {
+            if (messageConfig.isSocialSpyAllowForced() && socialspypermissions.testSuffix(user, "force")) {
                 return Tristate.TRUE;
             }
 
@@ -134,7 +134,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
             return false;
         }
 
-        return this.ucl.get(user).map(x -> {
+        return ucl.get(user).map(x -> {
             x.get(MessageUserDataModule.class).setSocialSpy(isSocialSpy);
             return true;
         }).orElse(false);
@@ -151,9 +151,9 @@ public class MessageHandler implements NucleusPrivateMessagingService {
                 return false;
             }
 
-            if (this.useLevels) {
+            if (useLevels) {
                 int target = Arrays.stream(sourceToSpyOn).mapToInt(this::getSocialSpyLevelForSource).max().orElse(0);
-                if (this.sameLevel) {
+                if (sameLevel) {
                     return target <= getSocialSpyLevel(spyingUser);
                 } else {
                     return target < getSocialSpyLevel(spyingUser);
@@ -184,7 +184,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
                 .filter(this::isSocialSpy)
                 .collect(Collectors.toSet());
 
-        if (!this.useLevels) {
+        if (!useLevels) {
             if (includeConsole) {
                 sources.add(Sponge.getServer().getConsole());
             }
@@ -195,7 +195,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
         // Get the highest level from the sources to spy on.
         int highestLevel = toSpyOn.stream().mapToInt(this::getSocialSpyLevelForSource).max().orElse(0);
         sources = sources.stream()
-            .filter(x -> this.sameLevel ? getSocialSpyLevelForSource(x) >= highestLevel : getSocialSpyLevelForSource(x) > highestLevel)
+            .filter(x -> sameLevel ? getSocialSpyLevelForSource(x) >= highestLevel : getSocialSpyLevelForSource(x) > highestLevel)
             .collect(Collectors.toSet());
 
         if (includeConsole) {
@@ -214,20 +214,20 @@ public class MessageHandler implements NucleusPrivateMessagingService {
             sender.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("message.cancel"));
 
             // Only continue to show Social Spy messages if the subject is muted.
-            if (!this.messageConfig.isShowMessagesInSocialSpyWhileMuted()) {
+            if (!messageConfig.isShowMessagesInSocialSpyWhileMuted()) {
                 return false;
             }
         }
 
         // What about msgtoggle?
         if (receiver instanceof Player && !sender.hasPermission(this.msgToggleBypass) &&
-                this.ucl.get((Player) receiver).map(x -> !x.get(MessageUserDataModule.class).isMsgToggle()).orElse(false)) {
+                ucl.get((Player) receiver).map(x -> !x.get(MessageUserDataModule.class).isMsgToggle()).orElse(false)) {
             isCancelled = true;
             isBlocked = true;
             sender.sendMessage(Nucleus.getNucleus().getMessageProvider()
                     .getTextMessageWithTextFormat("message.blocked", Nucleus.getNucleus().getNameUtil().getName((Player) receiver)));
 
-            if (!this.messageConfig.isShowMessagesInSocialSpyWhileMuted()) {
+            if (!messageConfig.isShowMessagesInSocialSpyWhileMuted()) {
                 return false;
             }
         }
@@ -242,26 +242,26 @@ public class MessageHandler implements NucleusPrivateMessagingService {
 
         // Create the tokens.
         Map<String, Function<CommandSource, Optional<Text>>> tokens = Maps.newHashMap();
-        tokens.put("from", cs -> getNameFromCommandSource(sender, this.textParsingUtils::addCommandToName));
-        tokens.put("to", cs -> getNameFromCommandSource(receiver, this.textParsingUtils::addCommandToName));
-        tokens.put("fromdisplay", cs -> getNameFromCommandSource(sender, this.textParsingUtils::addCommandToDisplayName));
-        tokens.put("todisplay", cs -> getNameFromCommandSource(receiver, this.textParsingUtils::addCommandToDisplayName));
+        tokens.put("from", cs -> getNameFromCommandSource(sender, textParsingUtils::addCommandToName));
+        tokens.put("to", cs -> getNameFromCommandSource(receiver, textParsingUtils::addCommandToName));
+        tokens.put("fromdisplay", cs -> getNameFromCommandSource(sender, textParsingUtils::addCommandToDisplayName));
+        tokens.put("todisplay", cs -> getNameFromCommandSource(receiver, textParsingUtils::addCommandToDisplayName));
 
         Text tm = useMessage(sender, message);
 
         if (!isCancelled) {
-            sender.sendMessage(constructMessage(sender, tm, this.messageConfig.getMessageSenderPrefix(), tokens, variables));
-            receiver.sendMessage(constructMessage(sender, tm, this.messageConfig.getMessageReceiverPrefix(), tokens, variables));
+            sender.sendMessage(constructMessage(sender, tm, messageConfig.getMessageSenderPrefix(), tokens, variables));
+            receiver.sendMessage(constructMessage(sender, tm, messageConfig.getMessageReceiverPrefix(), tokens, variables));
         }
 
-        NucleusTextTemplateImpl prefix = this.messageConfig.getMessageSocialSpyPrefix();
+        NucleusTextTemplateImpl prefix = messageConfig.getMessageSocialSpyPrefix();
         if (isBlocked) {
-            prefix = NucleusTextTemplateFactory.createFromAmpersandString(this.messageConfig.getBlockedTag() + prefix.getRepresentation());
+            prefix = NucleusTextTemplateFactory.createFromAmpersandString(messageConfig.getBlockedTag() + prefix.getRepresentation());
         } if (isCancelled) {
-            prefix = NucleusTextTemplateFactory.createFromAmpersandString(this.messageConfig.getMutedTag() + prefix.getRepresentation());
+            prefix = NucleusTextTemplateFactory.createFromAmpersandString(messageConfig.getMutedTag() + prefix.getRepresentation());
         }
 
-        MessageConfig.Targets targets = this.messageConfig.spyOn();
+        MessageConfig.Targets targets = messageConfig.spyOn();
         if (sender instanceof Player && targets.isPlayer() || sender instanceof ConsoleSource && targets.isCustom() || targets.isCustom()) {
             Set<CommandSource> lm = onlinePlayersCanSpyOn(
                 !uuidSender.equals(Util.consoleFakeUUID) && !uuidReceiver.equals(Util.consoleFakeUUID), sender, receiver
@@ -275,7 +275,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
 
         // Add the UUIDs to the reply list - the receiver will now reply to the sender.
         if (!isCancelled) {
-            this.messagesReceived.put(uuidReceiver, uuidSender);
+            messagesReceived.put(uuidReceiver, uuidSender);
         }
 
         return !isCancelled;
@@ -283,7 +283,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
 
     private Optional<Text> getNameFromCommandSource(CommandSource source, Function<CommandSource, Text> standardFn) {
         if (source instanceof Identifiable) {
-            CustomMessageTarget<? extends CommandSource> target = this.targets.get(((Identifiable) source).getUniqueId());
+            CustomMessageTarget<? extends CommandSource> target = targets.get(((Identifiable) source).getUniqueId());
             if (target != null) {
                 return Optional.of(target.getDisplayName());
             }
@@ -315,27 +315,27 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     @Override public void setReplyTo(User user, CommandSource toReplyTo) {
-        this.messagesReceived.put(user.getUniqueId(), getUUID(Preconditions.checkNotNull(toReplyTo)));
+        messagesReceived.put(user.getUniqueId(), getUUID(Preconditions.checkNotNull(toReplyTo)));
     }
 
     @Override public void setConsoleReplyTo(CommandSource toReplyTo) {
-        this.messagesReceived.put(Util.consoleFakeUUID, getUUID(Preconditions.checkNotNull(toReplyTo)));
+        messagesReceived.put(Util.consoleFakeUUID, getUUID(Preconditions.checkNotNull(toReplyTo)));
     }
 
     @Override public <T extends CommandSource & Identifiable> void setCommandSourceReplyTo(T source, CommandSource replyTo) {
-        this.messagesReceived.put(source.getUniqueId(), getUUID(replyTo));
+        messagesReceived.put(source.getUniqueId(), getUUID(replyTo));
     }
 
     @Override public void clearReplyTo(User user) {
-        this.messagesReceived.remove(user.getUniqueId());
+        messagesReceived.remove(user.getUniqueId());
     }
 
     @Override public <T extends CommandSource & Identifiable> void clearCommandSourceReplyTo(T user) {
-        this.messagesReceived.remove(user.getUniqueId());
+        messagesReceived.remove(user.getUniqueId());
     }
 
     @Override public void clearConsoleReplyTo() {
-        this.messagesReceived.remove(Util.consoleFakeUUID);
+        messagesReceived.remove(Util.consoleFakeUUID);
     }
 
     @Override
@@ -347,17 +347,17 @@ public class MessageHandler implements NucleusPrivateMessagingService {
         Preconditions.checkArgument(!uniqueId.equals(Util.consoleFakeUUID), "Cannot use the zero UUID");
         Preconditions.checkArgument(targetName.toLowerCase().matches("[a-z0-9_-]{3,}"),
                 "Target name must only contain letters, numbers, hyphens and underscores. and must be at least three characters long.");
-        Preconditions.checkState(!this.targets.containsKey(uniqueId), "UUID already registered");
-        Preconditions.checkState(!this.targetNames.containsKey(targetName.toLowerCase()), "Target name already registered.");
+        Preconditions.checkState(!targets.containsKey(uniqueId), "UUID already registered");
+        Preconditions.checkState(!targetNames.containsKey(targetName.toLowerCase()), "Target name already registered.");
 
         // Create it
-        this.targets.put(uniqueId, new CustomMessageTarget<>(uniqueId, targetName, displayName, target));
-        this.targetNames.put(targetName.toLowerCase(), uniqueId);
+        targets.put(uniqueId, new CustomMessageTarget<>(uniqueId, targetName, displayName, target));
+        targetNames.put(targetName.toLowerCase(), uniqueId);
     }
 
     public Optional<CommandSource> getLastMessageFrom(UUID from) {
         Preconditions.checkNotNull(from);
-        UUID to = this.messagesReceived.get(from);
+        UUID to = messagesReceived.get(from);
         if (to == null) {
             return Optional.empty();
         }
@@ -366,8 +366,8 @@ public class MessageHandler implements NucleusPrivateMessagingService {
             return Optional.of(Sponge.getServer().getConsole());
         }
 
-        if (this.targets.containsKey(to)) {
-            Optional<? extends CommandSource> om = this.targets.get(to).get();
+        if (targets.containsKey(to)) {
+            Optional<? extends CommandSource> om = targets.get(to).get();
             if (om.isPresent()) {
                 return om.map(x -> x);
             }
@@ -377,9 +377,9 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     public Optional<CommandSource> getTarget(String target) {
-        UUID u = this.targetNames.get(target.toLowerCase());
+        UUID u = targetNames.get(target.toLowerCase());
         if (u != null) {
-            CustomMessageTarget<? extends CommandSource> cmt = this.targets.get(u);
+            CustomMessageTarget<? extends CommandSource> cmt = targets.get(u);
             if (cmt != null) {
                 return cmt.get().map(x -> x);
             }
@@ -389,7 +389,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     public ImmutableMap<String, UUID> getTargetNames() {
-        return ImmutableMap.copyOf(this.targetNames);
+        return ImmutableMap.copyOf(targetNames);
     }
 
     private UUID getUUID(CommandSource sender) {
@@ -413,16 +413,16 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     private Text useMessage(CommandSource player, String m) {
-        for (Map.Entry<String[],  Function<String, String>> r : this.replacements.entrySet()) {
+        for (Map.Entry<String[],  Function<String, String>> r : replacements.entrySet()) {
             // If we don't have the required permission...
-            if (Arrays.stream(r.getKey()).noneMatch(x -> this.messagepermissions.testSuffix(player, x))) {
+            if (Arrays.stream(r.getKey()).noneMatch(x -> messagepermissions.testSuffix(player, x))) {
                 // ...strip the codes.
                 m = r.getValue().apply(m);
             }
         }
 
         Text result;
-        if (this.messagepermissions.testSuffix(player, "url")) {
+        if (messagepermissions.testSuffix(player, "url")) {
             result = TextParsingUtils.addUrls(m);
         } else {
             result = TextSerializers.FORMATTING_CODE.deserialize(m);
@@ -432,14 +432,14 @@ public class MessageHandler implements NucleusPrivateMessagingService {
     }
 
     private int getSocialSpyLevelForSource(CommandSource source) {
-        if (this.useLevels) {
+        if (useLevels) {
             if (source instanceof User) {
                return getSocialSpyLevel((User) source);
-            } else if (source instanceof Identifiable && this.targets.containsKey(((Identifiable) source).getUniqueId())) {
-                return this.messageConfig.getCustomTargetLevel();
+            } else if (source instanceof Identifiable && targets.containsKey(((Identifiable) source).getUniqueId())) {
+                return messageConfig.getCustomTargetLevel();
             }
 
-            return this.messageConfig.getServerLevel();
+            return messageConfig.getServerLevel();
         }
 
         return 0;
@@ -461,8 +461,8 @@ public class MessageHandler implements NucleusPrivateMessagingService {
         }
 
         private Optional<T> get() {
-            T t = this.supplier.get();
-            if (t.getUniqueId().equals(this.uuid)) {
+            T t = supplier.get();
+            if (t.getUniqueId().equals(uuid)) {
                 return Optional.of(t);
             }
 
@@ -470,7 +470,7 @@ public class MessageHandler implements NucleusPrivateMessagingService {
         }
 
         private Text getDisplayName() {
-            return this.displayName == null ? Text.of(this.supplier.get().getName()) : this.displayName;
+            return displayName == null ? Text.of(supplier.get().getName()) : displayName;
         }
 
         @Override public UUID getUniqueId() {

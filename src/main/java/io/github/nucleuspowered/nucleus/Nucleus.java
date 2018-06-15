@@ -63,6 +63,8 @@ public abstract class Nucleus {
 
     public abstract Path getDataPath();
 
+    public abstract Supplier<Path> getDataPathSupplier();
+
     public abstract UserDataManager getUserDataManager();
 
     public abstract WorldDataManager getWorldDataManager();

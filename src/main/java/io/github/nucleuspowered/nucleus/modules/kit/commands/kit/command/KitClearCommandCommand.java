@@ -5,39 +5,45 @@
 package io.github.nucleuspowered.nucleus.modules.kit.commands.kit.command;
 
 import com.google.common.collect.Lists;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
+import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
+import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
+import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 @NoModifiers
 @NonnullByDefault
 @RunAsync
-@Permissions(prefix = "kit.command", mainOverride = "remove", suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(prefix = "kit.command", mainOverride = "remove", suggestedLevel = SuggestedLevel.NONE)
 @RegisterCommand(value = {"clear"}, subcommandOf = KitCommandCommand.class)
-public class KitClearCommandCommand extends KitFallbackBase<CommandSource> {
+public class KitClearCommandCommand extends AbstractCommand<CommandSource> {
+
+    private final String key = "kit";
+
+    private final KitHandler handler = getServiceUnchecked(KitHandler.class);
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
-                KitFallbackBase.KIT_PARAMETER_NO_PERM_CHECK
+            new KitArgument(Text.of(key), false)
         };
     }
 
-    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) {
-        Kit kitInfo = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        Kit kitInfo = args.<Kit>getOne(key).get();
         kitInfo.setCommands(Lists.newArrayList());
-        KIT_HANDLER.saveKit(kitInfo);
+        handler.saveKit(kitInfo);
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.command.clear.command", kitInfo.getName()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.clear.command", kitInfo.getName()));
         return CommandResult.success();
     }
 }

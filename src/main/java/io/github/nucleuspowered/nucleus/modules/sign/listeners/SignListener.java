@@ -18,7 +18,7 @@ import org.spongepowered.api.text.serializer.TextSerializers;
 
 import java.util.Map;
 
-public class SignListener implements ListenerBase {
+public class SignListener extends ListenerBase {
 
     private final String permission = PermissionRegistry.PERMISSIONS_PREFIX + "sign.formatting";
 
@@ -26,7 +26,7 @@ public class SignListener implements ListenerBase {
     public void onPlayerChangeSign(ChangeSignEvent event, @Root Player player) {
         SignData signData = event.getText();
 
-        if (player.hasPermission(this.permission)) {
+        if (player.hasPermission(permission)) {
             for (int i = 0; i < signData.lines().size(); i++) {
                 signData = signData.set(signData.lines().set(i, TextSerializers.FORMATTING_CODE.deserialize(signData.lines().get(i).toPlain())));
             }
@@ -36,7 +36,7 @@ public class SignListener implements ListenerBase {
     @Override
     public Map<String, PermissionInformation> getPermissions() {
         Map<String, PermissionInformation> mp = Maps.newHashMap();
-        mp.put(this.permission, PermissionInformation.getWithTranslation("permission.sign.formatting", SuggestedLevel.ADMIN));
+        mp.put(permission, PermissionInformation.getWithTranslation("permission.sign.formatting", SuggestedLevel.ADMIN));
         return mp;
     }
 }

@@ -32,11 +32,11 @@ public class HomeUserDataModule extends DataModule.ReferenceService<ModularUserS
     }
 
     public Optional<Home> getHome(String home) {
-        if (this.homeData == null) {
+        if (homeData == null) {
             return Optional.empty();
         }
 
-        LocationNode ln = Util.getValueIgnoreCase(this.homeData, home).orElse(null);
+        LocationNode ln = Util.getValueIgnoreCase(homeData, home).orElse(null);
         if (ln != null) {
             return Optional.of(new HomeData(home, ln.getWorld(), ln.getPosition(), ln.getRotation()));
         }
@@ -46,11 +46,11 @@ public class HomeUserDataModule extends DataModule.ReferenceService<ModularUserS
 
 
     public Map<String, Home> getHomes() {
-        if (this.homeData == null || this.homeData.isEmpty()) {
+        if (homeData == null || homeData.isEmpty()) {
             return Maps.newHashMap();
         }
 
-        return this.homeData.entrySet().stream()
+        return homeData.entrySet().stream()
                 .collect(Collectors.toMap(Map.Entry::getKey,
                         x -> new HomeData(x.getKey(), x.getValue().getWorld(), x.getValue().getPosition(), x.getValue().getRotation())));
     }
@@ -62,29 +62,29 @@ public class HomeUserDataModule extends DataModule.ReferenceService<ModularUserS
     public boolean setHome(String home, Location<World> location, Vector3d rotation, boolean overwrite) {
         final Pattern warpName = Pattern.compile("^[a-zA-Z][a-zA-Z0-9]{1,15}$");
 
-        if (this.homeData == null) {
-            this.homeData = Maps.newHashMap();
+        if (homeData == null) {
+            homeData = Maps.newHashMap();
         }
 
-        Optional<String> os = Util.getKeyIgnoreCase(this.homeData, home);
+        Optional<String> os = Util.getKeyIgnoreCase(homeData, home);
         if (os.isPresent() || !warpName.matcher(home).matches()) {
             if (!overwrite || !deleteHome(home)) {
                 return false;
             }
         }
 
-        this.homeData.put(home, new LocationNode(location, rotation));
+        homeData.put(home, new LocationNode(location, rotation));
         return true;
     }
 
     public boolean deleteHome(String home) {
-        if (this.homeData == null) {
+        if (homeData == null) {
             return false;
         }
 
-        Optional<String> os = Util.getKeyIgnoreCase(this.homeData, home);
+        Optional<String> os = Util.getKeyIgnoreCase(homeData, home);
         if (os.isPresent()) {
-            this.homeData.remove(os.get());
+            homeData.remove(os.get());
             return true;
         }
 

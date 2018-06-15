@@ -5,6 +5,7 @@
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.DifficultyArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.ImprovedCatalogTypeArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.ImprovedGameModeArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -93,7 +94,7 @@ public class CreateWorldCommand extends AbstractCommand<CommandSource> implement
                 .valueFlag(new ImprovedCatalogTypeArgument(Text.of(modifier), CatalogTypes.WORLD_GENERATOR_MODIFIER), "m", "-" + modifier)
                 .valueFlag(GenericArguments.onlyOne(GenericArguments.longNum(Text.of(seed))), "s", "-" + seed)
                 .valueFlag(GenericArguments.onlyOne(new ImprovedGameModeArgument(Text.of(gamemode))), "-gm", "-" + gamemode)
-                .valueFlag(GenericArguments.onlyOne(new ImprovedCatalogTypeArgument(Text.of(difficulty), CatalogTypes.DIFFICULTY)), "-di", "-" + difficulty)
+                .valueFlag(GenericArguments.onlyOne(new DifficultyArgument(Text.of(difficulty))), "-di", "-" + difficulty)
                 .flag("n", "-nostructures")
                 .flag("i")
                 .valueFlag(GenericArguments.bool(Text.of("l")), "l", "-loadonstartup")
@@ -120,14 +121,14 @@ public class CreateWorldCommand extends AbstractCommand<CommandSource> implement
         boolean bonusChest = !args.hasAny("b") || args.<Boolean>getOne("b").orElse(true);
 
         if (Sponge.getServer().getAllWorldProperties().stream().anyMatch(x -> x.getWorldName().equalsIgnoreCase(nameInput))) {
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.create.exists", nameInput));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.create.exists", nameInput));
         }
 
         // Does the world exist?
         Path worldPath = Sponge.getGame().getGameDirectory().resolve("world");
         Path worldDir = worldPath.resolve(nameInput);
         if (!args.hasAny("i") && Files.exists(worldDir)) {
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.import.noexist", nameInput));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.import.noexist", nameInput));
         }
 
         if (args.hasAny("i") && Files.exists(worldDir)) {
@@ -166,18 +167,17 @@ public class CreateWorldCommand extends AbstractCommand<CommandSource> implement
         .commandsAllowed(allowCommands)
         .generateBonusChest(bonusChest);
 
+        WorldArchetype wa = worldSettingsBuilder.build(nameInput.toLowerCase(), nameInput);
         seedInput.ifPresent(worldSettingsBuilder::seed);
 
-        WorldArchetype wa = worldSettingsBuilder.build(nameInput.toLowerCase(), nameInput);
-
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.create.begin", nameInput));
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.create.newparams",
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.create.begin", nameInput));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.create.newparams",
                 wa.getDimensionType().getName(),
                 wa.getGeneratorType().getName(),
                 modifierString(modifiers),
                 wa.getGameMode().getName(),
                 wa.getDifficulty().getName()));
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.create.newparams2",
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.create.newparams2",
                 String.valueOf(loadOnStartup),
                 String.valueOf(keepSpawnLoaded),
                 String.valueOf(genStructures),
@@ -200,7 +200,7 @@ public class CreateWorldCommand extends AbstractCommand<CommandSource> implement
 
         if (world.isPresent()) {
             world.get().getProperties().setDifficulty(wa.getDifficulty());
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.create.success", nameInput));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.create.success", nameInput));
             return CommandResult.success();
         } else {
             throw ReturnMessageException.fromKey("command.world.create.worldfailedtoload", nameInput);

@@ -4,6 +4,7 @@
  */
 package io.github.nucleuspowered.nucleus.modules.home.commands;
 
+import io.github.nucleuspowered.nucleus.NameUtil;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
@@ -17,6 +18,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -24,7 +26,7 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @RunAsync
 @NoModifiers
 @NonnullByDefault
-@Permissions(prefix = "home", supportsOthers = true, suggestedLevel = SuggestedLevel.USER)
+@Permissions(supportsOthers = true, suggestedLevel = SuggestedLevel.USER)
 @RegisterCommand(value = "limit", subcommandOf = HomeCommand.class)
 public class HomeLimitCommand extends AbstractCommand<CommandSource> {
 
@@ -34,9 +36,8 @@ public class HomeLimitCommand extends AbstractCommand<CommandSource> {
     @Override
     protected CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.optional(
-                        GenericArguments.requiringPermission(
-                                GenericArguments.user(Text.of(this.player)), this.permissions.getOthers()))
+                GenericArguments.requiringPermission(GenericArguments.optional(GenericArguments.user(Text.of(this.player))),
+                        this.permissions.getOthers())
         };
     }
 

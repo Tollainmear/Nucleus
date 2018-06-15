@@ -29,7 +29,7 @@ import java.util.Random;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class ServerListListener implements Reloadable, ListenerBase.Conditional {
+public class ServerListListener extends ListenerBase implements Reloadable, ListenerBase.Conditional {
 
     private final Random random = new Random();
     private ServerListConfig config;
@@ -47,7 +47,7 @@ public class ServerListListener implements Reloadable, ListenerBase.Conditional 
 
         if (this.config.isModifyServerList()) {
             List<NucleusTextTemplateImpl> list = null;
-            Optional<Text> ott = Nucleus.getNucleus().getGeneralService().get(ServerListGeneralDataModule.class).getMessage();
+            Optional<Text> ott = plugin.getGeneralService().get(ServerListGeneralDataModule.class).getMessage();
 
             if (ott.isPresent()) {
                 response.setDescription(ott.get());
@@ -81,8 +81,8 @@ public class ServerListListener implements Reloadable, ListenerBase.Conditional 
     }
 
     @Override
-    public void onReload() {
-        this.config = Nucleus.getNucleus().getConfigValue(ServerListModule.ID, ServerListConfigAdapter.class, Function.identity())
+    public void onReload() throws Exception {
+        this.config = this.plugin.getConfigValue(ServerListModule.ID, ServerListConfigAdapter.class, Function.identity())
                 .orElseGet(ServerListConfig::new);
     }
 

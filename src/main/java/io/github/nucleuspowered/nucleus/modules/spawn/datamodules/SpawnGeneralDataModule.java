@@ -25,10 +25,10 @@ public class SpawnGeneralDataModule extends DataModule<ModularGeneralService> {
     private LocationNode firstspawn = null;
 
     public Optional<Transform<World>> getFirstSpawn() {
-        if (this.firstspawn != null) {
+        if (firstspawn != null) {
             try {
                 Transform<World> lwr =
-                        new Transform<>(this.firstspawn.getLocation().getExtent(), this.firstspawn.getLocation().getPosition(), this.firstspawn.getRotation());
+                        new Transform<>(firstspawn.getLocation().getExtent(), firstspawn.getLocation().getPosition(), firstspawn.getRotation());
                 return Optional.of(lwr);
             } catch (NoSuchWorldException e) {
                 return Optional.empty();
@@ -39,10 +39,10 @@ public class SpawnGeneralDataModule extends DataModule<ModularGeneralService> {
     }
 
     public void setFirstSpawn(Location<World> location, Vector3d rot) {
-        this.firstspawn = new LocationNode(location, rot);
+        firstspawn = new LocationNode(location, rot);
     }
 
     public void removeFirstSpawn() {
-        this.firstspawn = null;
+        firstspawn = null;
     }
 }

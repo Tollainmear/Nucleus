@@ -1,84 +1,32 @@
-buildscript {
-    repositories {
-        jcenter()
-        maven {
-            name 'Sponge maven repo'
-            url 'https://repo.spongepowered.org/maven'
-        }
-    }
-    dependencies {
-        classpath 'org.spongepowered:spongegradle:0.8.2-SNAPSHOT'
-    }
-}
-
 plugins {
     id 'idea'
     id 'eclipse'
     id 'com.github.hierynomus.license' version '0.12.1'
     id 'ninja.miserable.blossom' version '1.0.1'
- //   id 'maven'
+    id 'maven'
     id 'com.github.johnrengelman.shadow' version '1.2.3'
     id 'java'
-    // id 'org.spongepowered.plugin' version '0.8.2-SNAPSHOT'
+    id 'org.spongepowered.plugin' version '0.8.1'
+    // id "com.qixalite.spongestart" version "1.4.3"
 }
 
-allprojects {
-    task gitHash {
-        def process = 'git rev-parse --short HEAD'.execute()
-        process.waitFor()
-        ext.hash = process.exitValue() ? 'unknown' : process.text.trim().replace('\n', '')
-    }
-
-    task gitCommitMessage(type: Exec) {
-        commandLine 'git', 'log', '-1', '--format=%B'
-        standardOutput = new ByteArrayOutputStream()
-        ext.message = {
-            standardOutput.toString().replaceAll('[\\r?\\n]+$', '')
-        }
-    }
-
-    apply plugin: 'java'
-}
-
-project.ext.versionno = '1.4.4'
+project.ext.versionno = '1.3.2'
 project.ext.minecraftversion = '1.12.2'
 project.ext.spongeapiversion = '7.0'
 project.ext.suffix = '-SNAPSHOT'
-project.ext.hash = ''
 
-String docVer
-boolean isSnapshot
-boolean isPR
-boolean isMajor
+allprojects {
+    apply plugin: 'java'
 
-if (project.properties.containsKey('override-doc-ver')) {
-    docVer = project.properties.get('override-doc-ver')
-    isSnapshot = false
-} else {
-    docVer = project.ext.versionno + "-S" + project.ext.spongeapiversion
-    isSnapshot = project.ext.suffix.endsWith('SNAPSHOT')
-    isPR = project.ext.suffix.contains('PR')
-    isMajor = project.ext.versionno.endsWith('.0')
-}
+    version = rootProject.versionno + rootProject.suffix + '-S' + rootProject.spongeapiversion
 
-// Add Git hash for unique version numbers, but only for non-snapshot versions
-if (project.ext.suffix != '') {
-    project.ext.hash = '-' + gitHash.hash
-}
-
-rootProject.version = project.versionno + project.suffix + '-S' + project.spongeapiversion
-project.ext.fileVersion = project.versionno + project.suffix + project.ext.hash + '-S' + project.spongeapiversion
-
-project(":nucleus-api") {
     repositories {
         jcenter()
         maven {
             name 'Sponge maven repo'
-            url 'https://repo.spongepowered.org/maven'
+            url 'http://repo.spongepowered.org/maven'
         }
     }
-
-    version = rootProject.versionno + rootProject.suffix + '-S' + rootProject.spongeapiversion
 
     task javadocJar(type: Jar, dependsOn: javadoc) {
         classifier = 'javadoc'
@@ -87,11 +35,7 @@ project(":nucleus-api") {
     }
 }
 
-if (!project.hasProperty("nosign")) {
-    apply plugin: 'signing'
-    apply plugin: 'org.spongepowered.plugin'
-    apply plugin: 'org.spongepowered.ore'
-}
+apply plugin: 'signing'
 
 description = 'The Ultimate Essentials Plugin.'
 ext.url = 'http://nucleuspowered.org'
@@ -100,9 +44,9 @@ group 'io.github.nucleuspowered'
 
 ext.spongeapi = '7.1.0-SNAPSHOT'
 
-def qsmlDep = "uk.co.drnaylor:quickstart-moduleloader:0.10.1"
+def qsmlDep = "uk.co.drnaylor:quickstart-moduleloader:0.9.0"
 def geoIpDep = 'com.maxmind.geoip2:geoip2:2.10.0'
-def neutrinoDep = 'io.github.nucleuspowered:neutrino:1.1.3'
+def neutrinoDep = 'io.github.nucleuspowered:neutrino:1.1.0'
 
 defaultTasks 'licenseFormat build'
 
@@ -164,29 +108,24 @@ license {
     }
 }
 
-def getVersion = {
-    rootProject.version
-}
-
 blossom {
-    replaceTokenIn('src/main/java/io/github/nucleuspowered/nucleus/PluginInfo.java')
-    replaceToken '@name@', project.name
-    replaceToken '@version@', getVersion
+    def location = 'src/main/java/io/github/nucleuspowered/nucleus/PluginInfo.java'
 
-    replaceToken '@description@', project.description
-    replaceToken '@url@', project.url
-    replaceToken '@gitHash@', gitHash.hash
+    replaceToken '@name@', project.name, location
+    replaceToken '@version@', project.version, location
+    replaceToken '@gitHash@', getGitHash(), location
+
+    replaceToken '@description@', project.description, location
+    replaceToken '@url@', project.url, location
 }
 
 jar {
     manifest {
         attributes  'Implementation-Title': project.name,
+                'Implementation-Version': version,
                 'SpongeAPI-Version': project.spongeapi,
-                'Implementation-Version': getVersion(),
-                'Git-Hash': gitHash.hash
+                'Git-Hash': getGitHash()
     }
-
-    archiveName = getVersion
 }
 
 shadowJar {
@@ -199,6 +138,7 @@ shadowJar {
         include(dependency("com.fasterxml.jackson.core:jackson-core"))
         include(dependency("com.fasterxml.jackson.core:jackson-databind"))
         include(dependency("com.fasterxml.jackson.core:jackson-annotations"))
+        include(dependency("io.github.lukehutch:fast-classpath-scanner"))
     }
 
     relocate 'com.maxmind.geoip2', 'io.github.nucleuspowered.relocate.com.maxmind.geoip2'
@@ -212,146 +152,53 @@ shadowJar {
     }
 
     exclude "io/github/nucleuspowered/nucleus/api/NucleusAPIMod.class"
-    archiveName = "Nucleus-${rootProject.version}-MC${project.ext.minecraftversion}-plugin.jar"
-    //shadowJar.archiveName = shadowName
-   // archiveName = "Nucleus-${version}-MC${project.ext.minecraftversion}-plugin.jar"
+    archiveName = "Nucleus-${version}-MC${project.ext.minecraftversion}-plugin.jar"
 }
-shadowJar.dependsOn(':nucleus-api:build')
+shadowJar.dependsOn([':nucleus-api:build'])
 
 task cleanJars() {
     project.file('output').listFiles().each {
-        x -> if (x.name.endsWith("jar") || x.name.endsWith("asc") || x.name.endsWith("md")) { x.delete() }
+        x -> if (x.name.endsWith("jar") || x.name.endsWith("asc")) { x.delete() }
     }
 }
 
 task copyJars(type: Copy, dependsOn: ':nucleus-api:build') {
-    from([project(":nucleus-api").jar, project(":nucleus-api").javadocJar, shadowJar])
+    from([subprojects.jar, subprojects.javadocJar, shadowJar])
     into project.file('output')
 }
 
 artifacts {
     archives shadowJar
-    shadow shadowJar
 }
 
-// Release notes
-
-task relnotes {
-    doLast {
-        String complete
-        if (isSnapshot) {
-            // read the snapshot.md file
-            String contents = new File('changelogs/templates/snapshot.md').getText("UTF-8")
-            complete = contents
-                    .replace('{{hash}}', gitHash.hash)
-                    .replace('{{message}}', gitCommitMessage.message())
-                    .replace('{{sponge}}', project.ext.spongeapiversion)
-        } else {
-            String contents
-            if (isPR) {
-                contents = new File('changelogs/templates/release-pr.md').getText("UTF-8")
-            } else if (isMajor) {
-                contents = new File('changelogs/templates/release-big.md').getText("UTF-8")
-            } else {
-                contents = new File('changelogs/templates/release.md').getText("UTF-8")
-            }
-
-            String notes = new File('changelogs/templates/' + docVer + ".md").getText("UTF-8")
-            complete = contents
-                    .replace('{{hash}}', gitHash.hash)
-                    .replace('{{info}}', notes)
-                    .replace('{{sponge}}', project.ext.spongeapiversion)
-        }
-
-        ext.notes = complete
+signing {
+    required {
+        project.properties.hasProperty("signing.keyId")
     }
+    sign configurations.archives
 }
 
-task printRelNotes(dependsOn: relnotes) {
-    doLast {
-        println(relnotes.notes)
-    }
+task copyAsc(type: Copy, dependsOn: 'signArchives') {
+    from([signArchives.getSignatureFiles()])
+    into project.file('output')
 }
 
-task writeRelNotes(dependsOn: relnotes)  {
-    doLast {
-        new File("$projectDir/changelogs/${version}.md").text = relnotes.notes
-    }
+task buildAndSign {
+    dependsOn 'build'
+    dependsOn 'signArchives'
+    dependsOn 'copyAsc'
 }
 
-task writeRelNotesInOutput(dependsOn: relnotes)  {
-    doLast {
-        new File("$projectDir/output/${version}.md").text = relnotes.notes
-    }
+static String getGitHash() {
+    def process = 'git rev-parse --short HEAD'.execute()
+    process.waitFor()
+    return process.exitValue() ? 'unknown' : process.text.trim()
 }
 
-// SIGNING & ORE DEPLOY
-
-if (!project.hasProperty("nosign")) {
-    signing {
-        required {
-            project.properties.hasProperty("signing.keyId")
-        }
-
-        if (project.properties.containsKey('gpg2')) {
-            useGpgCmd() // requires gpg2
-        }
-
-        // sign configurations.archives
-        // we want to add the signatures to this configuration too, as this
-        // is what we use to upload to Ore
-        configuration=configurations.shadow
-        sign configurations.shadow
-    }
-
-    task signArchives(dependsOn: 'signShadow') {
-        // dummy task to make the ore deploy plugin work
-    }
-
-    task copyAsc(type: Copy, dependsOn: 'signArchives') {
-        from([signShadow.getSignatureFiles()])
-        into project.file('output')
-    }
-
-    task buildAndSign {
-        dependsOn 'build'
-        dependsOn 'signArchives'
-        dependsOn 'signShadow'
-        dependsOn 'copyAsc'
-    }
-
-    signArchives.dependsOn(shadowJar)
-    copyAsc.dependsOn(signArchives)
-    signShadow.dependsOn(shadowJar).mustRunAfter(shadowJar)
-    copyAsc.dependsOn(signShadow)
-    oreDeploy.dependsOn(buildAndSign)
-
-    oreDeploy.setRecommended(project.properties.containsKey("oreDeploy.recommended"))
-    if (project.properties.containsKey("oreDeploy.channel")) {
-        oreDeploy.setChannel(project.properties.get("oreDeploy.channel").toString())
-    } else if (project.properties.containsKey("oreDeploy.select")) {
-        if (isPR) {
-            oreDeploy.setChannel("prerelease")
-        } else if (isSnapshot) {
-            oreDeploy.setChannel("testing")
-        } else {
-            oreDeploy.setChannel("Release")
-            oreDeploy.setRecommended(true)
-        }
-    } else {
-        oreDeploy.setChannel("testing")
-    }
-
-    oreDeploy.setDeploy(project.configurations.shadow) // yet another hack
-
-}
-
-blossomSourceReplacementJava.dependsOn(gitHash)
-jar.dependsOn(gitHash)
-relnotes.dependsOn([gitHash, gitCommitMessage])
 compileJava.dependsOn(":nucleus-ap:build")
 clean.dependsOn(cleanJars)
 copyJars.mustRunAfter(cleanJars)
 build.dependsOn(shadowJar)
 build.dependsOn(copyJars)
-build.dependsOn(writeRelNotesInOutput)
+signArchives.dependsOn(shadowJar)
+copyAsc.dependsOn(signArchives)

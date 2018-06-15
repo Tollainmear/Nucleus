@@ -43,14 +43,14 @@ public class RegexArgument extends CommandElement {
 
     @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
         String arg = args.next();
-        if (this.regex.matcher(arg).matches()) {
+        if (regex.matcher(arg).matches()) {
             return arg;
         }
 
-        throw args.createError(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(this.errorKey));
+        throw args.createError(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(errorKey));
     }
 
     @Override public List<String> complete(CommandSource src, CommandArgs args, CommandContext context) {
-        return this.function.accept(src, args, context);
+        return function.accept(src, args, context);
     }
 }

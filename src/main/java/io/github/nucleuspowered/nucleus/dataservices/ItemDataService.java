@@ -30,12 +30,12 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
     private Map<CatalogType, Double> sellCache = null;
     private final Set<Action> onItemUpdate = Sets.newHashSet();
 
-    public ItemDataService(DataProvider<Map<String, ItemDataNode>> dataProvider) {
+    public ItemDataService(DataProvider<Map<String, ItemDataNode>> dataProvider) throws Exception {
         super(dataProvider);
     }
 
     public void addOnItemUpdate(Action onUpdate) {
-        this.onItemUpdate.add(onUpdate);
+        onItemUpdate.add(onUpdate);
     }
 
     @Override
@@ -69,7 +69,7 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
 
     public ItemDataNode getDataForItem(String id) {
         Preconditions.checkNotNull(id);
-        return this.data.getOrDefault(id.toLowerCase(), new ItemDataNode());
+        return data.getOrDefault(id.toLowerCase(), new ItemDataNode());
     }
 
     public void setDataForItem(ItemStackSnapshot itemStackSnapshot, ItemDataNode node) {
@@ -79,7 +79,7 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
     public void setDataForItem(String id, ItemDataNode node) {
         Preconditions.checkNotNull(id);
         Preconditions.checkNotNull(node);
-        this.data.put(id, node);
+        data.put(id, node);
         save();
     }
 
@@ -89,7 +89,7 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
 
     private void resetDataForItem(String id) {
         Preconditions.checkNotNull(id);
-        this.data.remove(id);
+        data.remove(id);
         save();
     }
 
@@ -99,7 +99,7 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
 
     public Map<CatalogType, Double> getServerBuyPrices() {
         if (this.buyCache == null) {
-            this.buyCache = this.data.entrySet().stream().filter(x -> x.getValue().getServerBuyPrice() >= 0)
+            this.buyCache = data.entrySet().stream().filter(x -> x.getValue().getServerBuyPrice() >= 0)
                     .map(this::toCt)
                     .collect(Collectors.toMap(Tuple::getFirst, x -> x.getSecond().getServerBuyPrice()));
         }
@@ -109,7 +109,7 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
 
     public Map<CatalogType, Double> getServerSellPrices() {
         if (this.sellCache == null) {
-            this.sellCache = this.data.entrySet().stream().filter(x -> x.getValue().getServerSellPrice() >= 0)
+            this.sellCache = data.entrySet().stream().filter(x -> x.getValue().getServerSellPrice() >= 0)
                     .map(this::toCt)
                     .collect(Collectors.toMap(Tuple::getFirst, x -> x.getSecond().getServerSellPrice()));
         }
@@ -123,13 +123,13 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
     }
 
     private Map<String, String> getCache() {
-        if (this.aliasToItemIdCache == null) {
-            this.aliasToItemIdCache = this.data.entrySet().stream()
+        if (aliasToItemIdCache == null) {
+            aliasToItemIdCache = data.entrySet().stream()
                     .flatMap(k -> k.getValue().getAliases().stream().map(i -> Tuple.of(i, k.getKey())))
                     .collect(Collectors.toMap(Tuple::getFirst, Tuple::getSecond));
         }
 
-        return this.aliasToItemIdCache;
+        return aliasToItemIdCache;
     }
 
     private String getIdFromSnapshot(ItemStackSnapshot stackSnapshot) {
@@ -139,9 +139,9 @@ public class ItemDataService extends AbstractService<Map<String, ItemDataNode>> 
     }
 
     private void clearCache() {
-        this.aliasToItemIdCache = null;
-        this.buyCache = null;
-        this.sellCache = null;
-        this.onItemUpdate.forEach(Action::action);
+        aliasToItemIdCache = null;
+        buyCache = null;
+        sellCache = null;
+        onItemUpdate.forEach(Action::action);
     }
 }

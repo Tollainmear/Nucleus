@@ -33,22 +33,22 @@ public class InternalNucleusMessageEvent extends AbstractEvent implements io.git
 
     @Override
     public CommandSource getSender() {
-        return this.from;
+        return from;
     }
 
     @Override
     public CommandSource getRecipient() {
-        return this.to;
+        return to;
     }
 
     @Override
     public String getMessage() {
-        return this.message;
+        return message;
     }
 
     @Override
     public boolean isCancelled() {
-        return this.isCancelled;
+        return isCancelled;
     }
 
     @Override

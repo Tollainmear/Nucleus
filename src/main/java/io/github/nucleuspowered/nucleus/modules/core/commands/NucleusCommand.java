@@ -39,8 +39,8 @@ public class NucleusCommand extends AbstractCommand<CommandSource> {
     @Nullable private Text modules = null;
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        if (this.modules == null) {
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        if (modules == null) {
             Text.Builder tb = Text.builder("Modules: ").color(TextColors.GREEN);
 
             boolean addComma = false;
@@ -54,11 +54,11 @@ public class NucleusCommand extends AbstractCommand<CommandSource> {
                 addComma = true;
             }
 
-            this.modules = tb.append(Text.of(TextColors.GREEN, ".")).build();
+            modules = tb.append(Text.of(TextColors.GREEN, ".")).build();
         }
 
-        src.sendMessage(this.version);
-        src.sendMessage(this.modules);
+        src.sendMessage(version);
+        src.sendMessage(modules);
         return CommandResult.success();
     }
 }

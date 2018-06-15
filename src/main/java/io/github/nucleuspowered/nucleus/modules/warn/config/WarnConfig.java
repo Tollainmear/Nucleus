@@ -32,30 +32,30 @@ public class WarnConfig {
     private String actionCommand = "tempban {{name}} 1d Exceeding the active warning threshold";
 
     public boolean isShowOnLogin() {
-        return this.showOnLogin;
+        return showOnLogin;
     }
 
     public boolean isExpireWarnings() {
-        return this.expireWarnings;
+        return expireWarnings;
     }
 
     public long getMinimumWarnLength() {
-        return this.minWarnLength;
+        return minWarnLength;
     }
 
     public long getMaximumWarnLength() {
-        return this.maxWarnLength;
+        return maxWarnLength;
     }
 
     public long getDefaultLength() {
-        return this.defaultLength;
+        return defaultLength;
     }
 
     public int getWarningsBeforeAction() {
-        return this.warningsBeforeAction;
+        return warningsBeforeAction;
     }
 
     public String getActionCommand() {
-        return this.actionCommand;
+        return actionCommand;
     }
 }

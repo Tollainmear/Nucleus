@@ -17,10 +17,10 @@ public class TeleportConfig {
     private boolean defaultQuiet = true;
 
     public boolean isDefaultQuiet() {
-        return this.defaultQuiet;
+        return defaultQuiet;
     }
 
     public boolean isUseSafeTeleport() {
-        return this.useSafeTeleport;
+        return useSafeTeleport;
     }
 }

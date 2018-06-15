@@ -10,6 +10,7 @@ import io.github.nucleuspowered.nucleus.internal.qsml.module.ConfigurableModule;
 import io.github.nucleuspowered.nucleus.modules.afk.AFKModule;
 import io.github.nucleuspowered.nucleus.modules.playerinfo.config.PlayerInfoConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.playerinfo.handlers.SeenHandler;
+import org.spongepowered.api.Sponge;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 
 @RegisterService(value = SeenHandler.class, apiService = NucleusSeenService.class)

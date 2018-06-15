@@ -12,7 +12,6 @@ import io.github.nucleuspowered.nucleus.internal.annotations.command.NotifyIfAFK
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -39,6 +38,7 @@ import java.util.Map;
 @NotifyIfAFK(MessageCommand.TO)
 public class MessageCommand extends AbstractCommand<CommandSource> {
     final static String TO = "to";
+    private final String message = "message";
 
     private final MessageHandler handler = getServiceUnchecked(MessageHandler.class);
 
@@ -61,13 +61,13 @@ public class MessageCommand extends AbstractCommand<CommandSource> {
                     SelectorWrapperArgument.nicknameSelector(Text.of(TO), NicknameArgument.UnderlyingType.PLAYER_CONSOLE,
                             true, Player.class, (c, p) -> PlayerConsoleArgument.shouldShow(p, c))
             ),
-            NucleusParameters.MESSAGE
+            GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(message)))
         };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        boolean b = this.handler.sendMessage(src, args.<CommandSource>getOne(TO).get(), args.<String>getOne(NucleusParameters.Keys.MESSAGE).get());
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        boolean b = handler.sendMessage(src, args.<CommandSource>getOne(TO).get(), args.<String>getOne(message).get());
         return b ? CommandResult.success() : CommandResult.empty();
     }
 }

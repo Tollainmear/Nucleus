@@ -26,13 +26,15 @@ import java.util.stream.Collectors;
 
 public class MailHandler implements NucleusMailService {
 
+    private final Nucleus plugin = Nucleus.getNucleus();
+
     @Override
     public final List<MailMessage> getMail(User player, MailFilter... filters) {
         return Lists.newArrayList(getMailInternal(player, filters));
     }
 
     public final List<MailData> getMailInternal(User player, MailFilter... filters) {
-        MailUserDataModule iqsu = Nucleus.getNucleus().getUserDataManager().getUnchecked(player).get(MailUserDataModule.class);
+        MailUserDataModule iqsu = plugin.getUserDataManager().getUnchecked(player).get(MailUserDataModule.class);
 
         List<MailData> lmd = iqsu.getMail();
         if (filters.length == 0 || lmd.isEmpty()) {
@@ -46,7 +48,7 @@ public class MailHandler implements NucleusMailService {
     @Override
     public boolean removeMail(User player, MailMessage mailData) {
         try {
-            return Nucleus.getNucleus().getUserDataManager().getUnchecked(player).get(MailUserDataModule.class).removeMail(mailData);
+            return plugin.getUserDataManager().getUnchecked(player).get(MailUserDataModule.class).removeMail(mailData);
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -57,7 +59,7 @@ public class MailHandler implements NucleusMailService {
     public void sendMail(User playerFrom, User playerTo, String message) {
         MailUserDataModule iqsu;
         try {
-            iqsu = Nucleus.getNucleus().getUserDataManager().getUnchecked(playerTo).get(MailUserDataModule.class);
+            iqsu = plugin.getUserDataManager().getUnchecked(playerTo).get(MailUserDataModule.class);
         } catch (Exception e) {
             e.printStackTrace();
             return;
@@ -73,7 +75,7 @@ public class MailHandler implements NucleusMailService {
         MailData md = new MailData(playerFrom == null ? Util.consoleFakeUUID : playerFrom.getUniqueId(), Instant.now(), message);
         iqsu.addMail(md);
 
-        Text from = playerFrom == null ? Text.of(Sponge.getServer().getConsole().getName()) : Nucleus.getNucleus().getNameUtil().getName(playerFrom);
+        Text from = playerFrom == null ? Text.of(Sponge.getServer().getConsole().getName()) : plugin.getNameUtil().getName(playerFrom);
         playerTo.getPlayer().ifPresent(x ->
                 x.sendMessage(Text.builder().append(NucleusPlugin.getNucleus().getMessageProvider()
                         .getTextMessageWithFormat("mail.youvegotmail")).append(Text.of(" ", from)).build()));
@@ -88,7 +90,7 @@ public class MailHandler implements NucleusMailService {
     public boolean clearUserMail(User player) {
         MailUserDataModule iqsu;
         try {
-            iqsu = Nucleus.getNucleus().getUserDataManager().get(player).get().get(MailUserDataModule.class);
+            iqsu = plugin.getUserDataManager().get(player).get().get(MailUserDataModule.class);
         } catch (Exception e) {
             e.printStackTrace();
             return false;

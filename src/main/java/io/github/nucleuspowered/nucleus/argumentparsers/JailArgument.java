@@ -23,17 +23,18 @@ import javax.annotation.Nullable;
 
 public class JailArgument extends CommandElement {
 
-    private final JailHandler handler = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(JailHandler.class);
+    private final JailHandler handler;
 
-    public JailArgument(@Nullable Text key) {
+    public JailArgument(@Nullable Text key, JailHandler handler) {
         super(key);
+        this.handler = handler;
     }
 
     @Nullable
     @Override
     protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
         String a = args.next().toLowerCase();
-        Optional<NamedLocation> owl = this.handler.getJail(a);
+        Optional<NamedLocation> owl = handler.getJail(a);
         if (owl.isPresent()) {
             return owl.get();
         }
@@ -45,9 +46,9 @@ public class JailArgument extends CommandElement {
     public List<String> complete(CommandSource src, CommandArgs args, CommandContext context) {
         try {
             String a = args.peek().toLowerCase();
-            return this.handler.getJails().keySet().stream().filter(x -> x.startsWith(a)).collect(Collectors.toList());
+            return handler.getJails().keySet().stream().filter(x -> x.startsWith(a)).collect(Collectors.toList());
         } catch (ArgumentParseException e) {
-            return Lists.newArrayList(this.handler.getJails().keySet());
+            return Lists.newArrayList(handler.getJails().keySet());
         }
     }
 }

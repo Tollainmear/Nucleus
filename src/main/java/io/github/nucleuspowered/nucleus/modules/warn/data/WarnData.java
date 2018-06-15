@@ -78,19 +78,19 @@ public class WarnData extends EndTimestamp implements Warning {
     }
 
     @Override public String getReason() {
-        return this.reason;
+        return reason;
     }
 
     @Override public Optional<UUID> getWarner() {
-        return this.warner.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(this.warner);
+        return warner.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(warner);
     }
 
     @Override public Instant getDate() {
-        return Instant.ofEpochMilli(this.date);
+        return Instant.ofEpochMilli(date);
     }
 
     @Override public boolean isExpired() {
-        return this.expired;
+        return expired;
     }
 
     @Override public boolean equals(Object o) {
@@ -103,23 +103,23 @@ public class WarnData extends EndTimestamp implements Warning {
 
         WarnData warnData = (WarnData) o;
 
-        if (this.date != warnData.date) {
+        if (date != warnData.date) {
             return false;
         }
-        if (this.expired != warnData.expired) {
+        if (expired != warnData.expired) {
             return false;
         }
-        if (!this.warner.equals(warnData.warner)) {
+        if (!warner.equals(warnData.warner)) {
             return false;
         }
-        return this.reason.equals(warnData.reason);
+        return reason.equals(warnData.reason);
     }
 
     @Override public int hashCode() {
-        int result = this.warner.hashCode();
-        result = 31 * result + this.reason.hashCode();
-        result = 31 * result + (int) (this.date ^ (this.date >>> 32));
-        result = 31 * result + (this.expired ? 1 : 0);
+        int result = warner.hashCode();
+        result = 31 * result + reason.hashCode();
+        result = 31 * result + (int) (date ^ (date >>> 32));
+        result = 31 * result + (expired ? 1 : 0);
         return result;
     }
 }

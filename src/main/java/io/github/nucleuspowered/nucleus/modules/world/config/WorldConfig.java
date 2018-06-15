@@ -21,35 +21,28 @@ public class WorldConfig {
     @Setting(value = "separate-permissions", comment = "config.worlds.separate")
     private boolean separatePermissions = false;
 
-    @Setting(value = "enforce-gamemode-on-world-change", comment = "config.worlds.gamemode")
-    private boolean enforceGamemodeOnWorldChange = false;
-
     public boolean isDisplayWarningGeneration() {
-        return this.worldGen.displayWarningGeneration;
+        return worldGen.displayWarningGeneration;
     }
 
     public boolean isDisplayAfterEachGen() {
-        return this.worldGen.displayEach;
+        return worldGen.displayEach;
     }
 
     public long getNotificationInterval() {
-        return Math.max(1, this.worldGen.timeToNotify);
-    }
-
-    public boolean isEnforceGamemodeOnWorldChange() {
-        return this.enforceGamemodeOnWorldChange;
+        return Math.max(1, worldGen.timeToNotify);
     }
 
     public Optional<Long> getWorldBorderDefault() {
-        if (this.worldBorderDefault < 1) {
+        if (worldBorderDefault < 1) {
             return Optional.empty();
         }
 
-        return Optional.of(this.worldBorderDefault);
+        return Optional.of(worldBorderDefault);
     }
 
     public boolean isSeparatePermissions() {
-        return this.separatePermissions;
+        return separatePermissions;
     }
 
     @ConfigSerializable

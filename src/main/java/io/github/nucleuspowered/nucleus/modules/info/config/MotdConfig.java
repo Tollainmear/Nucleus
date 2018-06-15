@@ -24,18 +24,18 @@ public class MotdConfig {
     private boolean usePagination = true;
 
     public boolean isShowMotdOnJoin() {
-        return this.showMotdOnJoin;
+        return showMotdOnJoin;
     }
 
     public String getMotdTitle() {
-        return this.motdTitle;
+        return motdTitle;
     }
 
     public boolean isUsePagination() {
-        return this.usePagination;
+        return usePagination;
     }
 
     public float getDelay() {
-        return this.delay;
+        return delay;
     }
 }

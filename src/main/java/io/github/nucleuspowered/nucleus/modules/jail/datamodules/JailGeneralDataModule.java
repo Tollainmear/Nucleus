@@ -23,19 +23,19 @@ public class JailGeneralDataModule extends LocationDataModule<ModularGeneralServ
     private Map<String, LocationNode> jails = Maps.newHashMap();
 
     public Optional<NamedLocation> getJailLocation(String name) {
-        return get(this.jails, this.getLocationData, name);
+        return get(jails, getLocationData, name);
     }
 
     public Map<String, NamedLocation> getJails() {
-        return convert(this.jails, this.getLocationData);
+        return convert(jails, getLocationData);
     }
 
     public boolean addJail(String name, Location<World> loc, Vector3d rot) {
-        return addLocation(name, loc, rot, this.jails);
+        return addLocation(name, loc, rot, jails);
     }
 
     public boolean removeJail(String name) {
-        return removeLocation(name, this.jails);
+        return removeLocation(name, jails);
     }
 
 }

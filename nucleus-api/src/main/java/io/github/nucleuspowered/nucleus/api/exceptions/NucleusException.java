@@ -30,7 +30,7 @@ public class NucleusException extends TextMessageException {
      * @return The exception.
      */
     public ExceptionType getExceptionType() {
-        return this.exceptionType;
+        return exceptionType;
     }
 
     public enum ExceptionType {

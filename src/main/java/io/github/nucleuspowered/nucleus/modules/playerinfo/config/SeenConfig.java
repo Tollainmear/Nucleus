@@ -14,6 +14,6 @@ public class SeenConfig {
     private boolean extendedPermRequired = false;
 
     public boolean isExtendedPermRequired() {
-        return this.extendedPermRequired;
+        return extendedPermRequired;
     }
 }

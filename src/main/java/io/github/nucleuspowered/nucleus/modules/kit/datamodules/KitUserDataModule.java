@@ -19,15 +19,15 @@ public class KitUserDataModule extends DataModule<ModularUserService> {
 
     public Map<String, Instant> getKitLastUsedTime() {
         final Map<String, Instant> r = Maps.newHashMap();
-        this.kitLastUsedTime.forEach((k, v) -> r.put(k.toLowerCase(), Instant.ofEpochSecond(v)));
+        kitLastUsedTime.forEach((k, v) -> r.put(k.toLowerCase(), Instant.ofEpochSecond(v)));
         return r;
     }
 
     public void addKitLastUsedTime(String kitName, Instant lastTime) {
-        this.kitLastUsedTime.put(kitName.toLowerCase(), lastTime.getEpochSecond());
+        kitLastUsedTime.put(kitName.toLowerCase(), lastTime.getEpochSecond());
     }
 
     public void removeKitLastUsedTime(String kitName) {
-        this.kitLastUsedTime.remove(kitName.toLowerCase());
+        kitLastUsedTime.remove(kitName.toLowerCase());
     }
 }

@@ -49,7 +49,7 @@ public class HomeCommand extends AbstractCommand<Player> implements Reloadable {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.onlyOne(GenericArguments.optional(new HomeArgument(Text.of(this.home), Nucleus.getNucleus())))
+            GenericArguments.onlyOne(GenericArguments.optional(new HomeArgument(Text.of(home), plugin)))
         };
     }
 
@@ -63,13 +63,13 @@ public class HomeCommand extends AbstractCommand<Player> implements Reloadable {
         }
 
         // Get the home.
-        Optional<Home> owl = args.getOne(this.home);
+        Optional<Home> owl = args.getOne(home);
         Home wl;
         if (owl.isPresent()) {
             wl = owl.get();
         } else {
-            wl = this.homeHandler.getHome(src, NucleusHomeService.DEFAULT_HOME_NAME)
-                .orElseThrow(() -> new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("args.home.nohome", "home")));
+            wl = homeHandler.getHome(src, NucleusHomeService.DEFAULT_HOME_NAME)
+                .orElseThrow(() -> new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("args.home.nohome", "home")));
         }
 
         Sponge.getServer().loadWorld(wl.getWorldProperties()
@@ -80,16 +80,16 @@ public class HomeCommand extends AbstractCommand<Player> implements Reloadable {
         UseHomeEvent event = CauseStackHelper.createFrameWithCausesWithReturn(c -> new UseHomeEvent(c, src, wl), src);
         if (Sponge.getEventManager().post(event)) {
             throw new ReturnMessageException(event.getCancelMessage().orElseGet(() ->
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("nucleus.eventcancelled")
+                plugin.getMessageProvider().getTextMessageWithFormat("nucleus.eventcancelled")
             ));
         }
 
         // Warp to it safely.
-        if (Nucleus.getNucleus().getTeleportHandler().teleportPlayer(src, targetLocation, wl.getRotation(),this.isSafeTeleport).isSuccess()) {
+        if (plugin.getTeleportHandler().teleportPlayer(src, targetLocation, wl.getRotation(),this.isSafeTeleport).isSuccess()) {
             if (!wl.getName().equalsIgnoreCase(NucleusHomeService.DEFAULT_HOME_NAME)) {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.home.success", wl.getName()));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.home.success", wl.getName()));
             } else {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.home.successdefault"));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.home.successdefault"));
             }
 
             return CommandResult.success();
@@ -99,7 +99,7 @@ public class HomeCommand extends AbstractCommand<Player> implements Reloadable {
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         HomeConfig hc = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(HomeConfigAdapter.class).getNodeOrDefault();
         this.isSafeTeleport = hc.isSafeTeleport();
         this.isPreventOverhang = hc.isPreventHomeCountOverhang();

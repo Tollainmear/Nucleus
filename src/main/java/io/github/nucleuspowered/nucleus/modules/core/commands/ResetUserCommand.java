@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
-@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.NONE)
 @RunAsync
 @NoModifiers
 @NonnullByDefault
@@ -55,15 +55,15 @@ public class ResetUserCommand extends AbstractCommand<CommandSource> {
         return new CommandElement[] {
             GenericArguments.flags().flag("a", "-all").buildWith(
                 GenericArguments.firstParsing(
-                    GenericArguments.user(Text.of(this.userKey)),
-                        new UUIDArgument<>(Text.of(this.uuidKey), u -> Sponge.getServiceManager().provideUnchecked(UserStorageService.class).get(u))
+                    GenericArguments.user(Text.of(userKey)),
+                        new UUIDArgument<>(Text.of(uuidKey), u -> Sponge.getServiceManager().provideUnchecked(UserStorageService.class).get(u))
                 ))
         };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        final User user = args.<User>getOne(this.userKey).orElseGet(() -> args.<User>getOne(this.uuidKey).get());
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        final User user = args.<User>getOne(userKey).orElseGet(() -> args.<User>getOne(uuidKey).get());
         final boolean deleteall = args.hasAny("a");
 
         List<Text> messages = new ArrayList<>();
@@ -81,7 +81,7 @@ public class ResetUserCommand extends AbstractCommand<CommandSource> {
         }
 
         messages.add(Text.builder().append(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.reset.reset")).style(TextStyles.UNDERLINE)
-                .onClick(TextActions.executeCallback(new Delete(user, deleteall))).build());
+                .onClick(TextActions.executeCallback(new Delete(plugin, user, deleteall))).build());
 
         src.sendMessages(messages);
         return CommandResult.success();
@@ -90,63 +90,65 @@ public class ResetUserCommand extends AbstractCommand<CommandSource> {
     private class Delete implements Consumer<CommandSource> {
 
         private final User user;
+        private final Nucleus plugin;
         private final boolean all;
 
-        public Delete(User user, boolean all) {
+        public Delete(Nucleus plugin, User user, boolean all) {
             this.user = user;
+            this.plugin = plugin;
             this.all = all;
         }
 
         @Override
         public void accept(CommandSource source) {
-            if (this.user.isOnline()) {
-                this.user.getPlayer().get().kick(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kick.defaultreason"));
+            if (user.isOnline()) {
+                user.getPlayer().get().kick(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kick.defaultreason"));
 
                 // Let Sponge do what it needs to close the user off.
-                Task.builder().execute(() -> this.accept(source)).delayTicks(1).submit(Nucleus.getNucleus());
+                Task.builder().execute(() -> this.accept(source)).delayTicks(1).submit(this.plugin);
                 return;
             }
 
-            source.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.reset.starting", this.user.getName()));
+            source.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.reset.starting", user.getName()));
 
             // Ban temporarily.
             final BanService bss = Sponge.getServiceManager().provideUnchecked(BanService.class);
-            final boolean isBanned = bss.getBanFor(this.user.getProfile()).isPresent();
-            bss.addBan(Ban.builder().type(BanTypes.PROFILE).expirationDate(Instant.now().plus(30, ChronoUnit.SECONDS)).profile(this.user.getProfile())
+            final boolean isBanned = bss.getBanFor(user.getProfile()).isPresent();
+            bss.addBan(Ban.builder().type(BanTypes.PROFILE).expirationDate(Instant.now().plus(30, ChronoUnit.SECONDS)).profile(user.getProfile())
                     .build());
 
             final MessageProvider messageProvider = NucleusPlugin.getNucleus().getMessageProvider();
 
             // Unload the player in a second, just to let events fire.
-            Sponge.getScheduler().createAsyncExecutor(Nucleus.getNucleus()).schedule(() -> {
-                UserDataManager ucl = Nucleus.getNucleus().getUserDataManager();
+            Sponge.getScheduler().createAsyncExecutor(plugin).schedule(() -> {
+                UserDataManager ucl = plugin.getUserDataManager();
 
                 // Get the file to delete.
                 try {
                     // Remove them from the cache immediately.
-                    ucl.forceUnloadAndDelete(this.user.getUniqueId());
-                    if (this.all) {
-                        String uuid = this.user.getUniqueId() + ".dat";
-                        if (Sponge.getServiceManager().provideUnchecked(UserStorageService.class).delete(this.user)) {
+                    ucl.forceUnloadAndDelete(user.getUniqueId());
+                    if (all) {
+                        String uuid = user.getUniqueId() + ".dat";
+                        if (Sponge.getServiceManager().provideUnchecked(UserStorageService.class).delete(user)) {
                             // Sponge Data
                             Files.deleteIfExists(Sponge.getGame().getSavesDirectory().resolve("data/sponge").resolve(uuid));
                             source.sendMessage(messageProvider
-                                    .getTextMessageWithFormat("command.nucleus.reset.completeall", this.user.getName()));
+                                    .getTextMessageWithFormat("command.nucleus.reset.completeall", user.getName()));
                         } else {
-                            source.sendMessage(messageProvider.getTextMessageWithFormat("command.nucleus.reset.completenonm", this.user.getName()));
+                            source.sendMessage(messageProvider.getTextMessageWithFormat("command.nucleus.reset.completenonm", user.getName()));
                         }
                     } else {
                         source.sendMessage(messageProvider
-                                .getTextMessageWithFormat("command.nucleus.reset.complete", this.user.getName()));
+                                .getTextMessageWithFormat("command.nucleus.reset.complete", user.getName()));
                     }
 
                     source.sendMessage(messageProvider
-                            .getTextMessageWithFormat("command.nucleus.reset.restartadvised", this.user.getName()));
+                            .getTextMessageWithFormat("command.nucleus.reset.restartadvised", user.getName()));
                 } catch (Exception e) {
-                    source.sendMessage(messageProvider .getTextMessageWithFormat("command.nucleus.reset.failed", this.user.getName()));
+                    source.sendMessage(messageProvider .getTextMessageWithFormat("command.nucleus.reset.failed", user.getName()));
                 } finally {
                     if (!isBanned) {
-                        bss.getBanFor(this.user.getProfile()).ifPresent(bss::removeBan);
+                        bss.getBanFor(user.getProfile()).ifPresent(bss::removeBan);
                     }
                 }
             } , 1, TimeUnit.SECONDS);

@@ -4,11 +4,11 @@
  */
 package io.github.nucleuspowered.nucleus.modules.fun.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.util.CauseStackHelper;
@@ -21,6 +21,7 @@ import org.spongepowered.api.entity.Entity;
 import org.spongepowered.api.entity.EntityTypes;
 import org.spongepowered.api.entity.living.Living;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 import org.spongepowered.api.util.blockray.BlockRay;
 import org.spongepowered.api.util.blockray.BlockRayHit;
@@ -39,22 +40,26 @@ import javax.annotation.Nullable;
         notes = "Selectors can be used, entities can be struck.")
 public class LightningCommand extends AbstractCommand<CommandSource> {
 
+    private final String player = "subject";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[]{
                 GenericArguments.optional(
-                    GenericArguments.requiringPermission(NucleusParameters.MANY_LIVING, this.permissions.getPermissionWithSuffix("others")))
+                    GenericArguments.requiringPermission(
+                        SelectorWrapperArgument.nicknameSelector(Text.of(player), NicknameArgument.UnderlyingType.PLAYER, false, Living.class),
+                            permissions.getPermissionWithSuffix("others")))
         };
     }
 
     @Override
     public CommandResult executeCommand(final CommandSource src, CommandContext args) throws Exception {
-        Collection<Living> playerCollection = args.getAll(NucleusParameters.Keys.SUBJECT);
+        Collection<Living> playerCollection = args.getAll(player);
 
         // No argument, let's not smite the subject.
         if (playerCollection.isEmpty()) {
             if (!(src instanceof Player)) {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.playeronly"));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.playeronly"));
                 return CommandResult.empty();
             }
 
@@ -88,7 +93,7 @@ public class LightningCommand extends AbstractCommand<CommandSource> {
 
         if (CauseStackHelper.createFrameWithCausesWithReturn(c -> world.spawnEntity(bolt), src)) {
             if (target != null) {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.lightning.success.other", Nucleus.getNucleus().getNameUtil()
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat("command.lightning.success.other", plugin.getNameUtil()
                         .getName(target)));
             }
 
@@ -96,7 +101,7 @@ public class LightningCommand extends AbstractCommand<CommandSource> {
         }
 
         if (target != null) {
-            throw ReturnMessageException.fromKeyText("command.lightning.errorplayer", Nucleus.getNucleus().getNameUtil().getName(target));
+            throw ReturnMessageException.fromKeyText("command.lightning.errorplayer", plugin.getNameUtil().getName(target));
         } else {
             throw ReturnMessageException.fromKey("command.lightning.error");
         }

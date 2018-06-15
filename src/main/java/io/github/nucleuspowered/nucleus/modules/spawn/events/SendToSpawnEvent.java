@@ -35,7 +35,7 @@ public class SendToSpawnEvent extends AbstractEvent implements NucleusSendToSpaw
 
     @Override public Transform<World> getTransformTo() {
         // Copy!
-        return new Transform<>(this.transform.getExtent(), this.transform.getPosition(), this.transform.getRotation());
+        return new Transform<>(transform.getExtent(), transform.getPosition(), transform.getRotation());
     }
 
     @Override public void setCancelReason(String reason) {
@@ -47,7 +47,7 @@ public class SendToSpawnEvent extends AbstractEvent implements NucleusSendToSpaw
     }
 
     public Optional<String> getCancelReason() {
-        return Optional.ofNullable(this.cancelReason);
+        return Optional.ofNullable(cancelReason);
     }
 
     @Override public void setCancelled(boolean cancel) {
@@ -55,10 +55,10 @@ public class SendToSpawnEvent extends AbstractEvent implements NucleusSendToSpaw
     }
 
     @Override public User getTargetUser() {
-        return this.targetUser;
+        return targetUser;
     }
 
     @Override public Cause getCause() {
-        return this.cause;
+        return cause;
     }
 }

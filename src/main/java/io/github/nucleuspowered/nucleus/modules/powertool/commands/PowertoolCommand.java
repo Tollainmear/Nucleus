@@ -12,7 +12,6 @@ import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
@@ -20,6 +19,7 @@ import io.github.nucleuspowered.nucleus.modules.powertool.datamodules.PowertoolU
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.data.type.HandTypes;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.item.ItemType;
@@ -40,10 +40,12 @@ import java.util.stream.Collectors;
 @NonnullByDefault
 public class PowertoolCommand extends AbstractCommand<Player> {
 
+    private final String commandKey = "command";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.OPTIONAL_COMMAND
+                GenericArguments.optional(GenericArguments.remainingJoinedStrings(Text.of(commandKey)))
         };
     }
 
@@ -52,7 +54,7 @@ public class PowertoolCommand extends AbstractCommand<Player> {
         ItemStack itemStack = src.getItemInHand(HandTypes.MAIN_HAND)
                 .orElseThrow(() -> ReturnMessageException.fromKey("command.powertool.noitem"));
 
-        Optional<String> command = args.getOne(NucleusParameters.Keys.COMMAND);
+        Optional<String> command = args.getOne(commandKey);
         PowertoolUserDataModule inu = Nucleus.getNucleus().getUserDataManager().getUnchecked(src).get(PowertoolUserDataModule.class);
         return command.map(s -> setPowertool(src, inu, itemStack.getType(), s))
                 .orElseGet(() -> viewPowertool(src, inu, itemStack));
@@ -60,7 +62,7 @@ public class PowertoolCommand extends AbstractCommand<Player> {
 
     private CommandResult viewPowertool(Player src, PowertoolUserDataModule user, ItemStack item) {
         Optional<List<String>> cmds = user.getPowertoolForItem(item.getType());
-        MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
+        MessageProvider mp = plugin.getMessageProvider();
         if (cmds.isPresent() && !cmds.get().isEmpty()) {
             Util.getPaginationBuilder(src)
                     .contents(cmds.get().stream().map(f -> Text.of(TextColors.YELLOW, f)).collect(Collectors.toList()))
@@ -81,7 +83,7 @@ public class PowertoolCommand extends AbstractCommand<Player> {
         }
 
         user.setPowertool(item, Lists.newArrayList(command));
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.powertool.set", item.getId(), command));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.powertool.set", item.getId(), command));
         return CommandResult.success();
     }
 }

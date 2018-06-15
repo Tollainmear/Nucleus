@@ -5,7 +5,6 @@
 package io.github.nucleuspowered.nucleus.modules.teleport.commands;
 
 import com.google.common.collect.Lists;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -47,7 +46,7 @@ public class TeleportAskAllHereCommand extends AbstractCommand<Player> {
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         //Cause cause = Cause.of(NamedCause.owner(src));
         List<Player> cancelled = Lists.newArrayList();
         Sponge.getServer().getOnlinePlayers().forEach(x -> {
@@ -62,18 +61,18 @@ public class TeleportAskAllHereCommand extends AbstractCommand<Player> {
                 return;
             }
 
-            TeleportHandler.TeleportBuilder tb = this.tpHandler.getBuilder().setFrom(x).setTo(src).setSafe(!args.<Boolean>getOne("f").orElse(false))
+            TeleportHandler.TeleportBuilder tb = tpHandler.getBuilder().setFrom(x).setTo(src).setSafe(!args.<Boolean>getOne("f").orElse(false))
                     .setBypassToggle(true).setSilentSource(true);
-            this.tpHandler.addAskQuestion(x.getUniqueId(), new TeleportHandler.TeleportPrep(Instant.now().plus(30, ChronoUnit.SECONDS), null, 0, tb));
+            tpHandler.addAskQuestion(x.getUniqueId(), new TeleportHandler.TeleportPrep(Instant.now().plus(30, ChronoUnit.SECONDS), null, 0, tb));
 
-            x.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tpahere.question", src.getName()));
+            x.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tpahere.question", src.getName()));
 
-            x.sendMessage(this.tpHandler.getAcceptDenyMessage());
+            x.sendMessage(tpHandler.getAcceptDenyMessage());
         });
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tpaall.success"));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tpaall.success"));
         if (!cancelled.isEmpty()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tpall.cancelled",
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tpall.cancelled",
                 cancelled.stream().map(User::getName).collect(Collectors.joining(", "))));
         }
 

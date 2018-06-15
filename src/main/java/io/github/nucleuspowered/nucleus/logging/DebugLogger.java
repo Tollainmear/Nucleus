@@ -21,15 +21,15 @@ public class DebugLogger extends LoggerWrapper {
     }
 
     private boolean isDebugModeOn() {
-        if (this.cca == null) {
+        if (cca == null) {
             try {
-                this.cca = this.plugin.getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
+                cca = plugin.getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
             } catch (Exception e) {
                 return true;
             }
         }
 
-        return this.cca.getNodeOrDefault().isDebugmode();
+        return cca.getNodeOrDefault().isDebugmode();
     }
 
     @Override public void debug(String format, Object arg) {

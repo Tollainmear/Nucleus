@@ -26,7 +26,7 @@ public abstract class AbstractCancelMessageEvent extends AbstractEvent implement
     }
 
     @Override public Optional<Text> getCancelMessage() {
-        return Optional.ofNullable(this.cancelMessage);
+        return Optional.ofNullable(cancelMessage);
     }
 
     @Override public void setCancelMessage(@Nullable Text message) {
@@ -42,6 +42,6 @@ public abstract class AbstractCancelMessageEvent extends AbstractEvent implement
     }
 
     @Override public Cause getCause() {
-        return this.cause;
+        return cause;
     }
 }

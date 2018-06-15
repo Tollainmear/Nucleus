@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -23,9 +22,9 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 public class SaveCommand extends AbstractCommand<CommandSource> {
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.save.start"));
-        Nucleus.getNucleus().saveData();
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.save.start"));
+        plugin.saveData();
         return CommandResult.success();
     }
 }

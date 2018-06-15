@@ -31,7 +31,7 @@ public class WarpCategoryDataNode {
     private String description = null;
 
     public Optional<String> getDisplayName() {
-        return Optional.ofNullable(this.displayName);
+        return Optional.ofNullable(displayName);
     }
 
     public void setDisplayName(@Nullable String displayName) {
@@ -39,7 +39,7 @@ public class WarpCategoryDataNode {
     }
 
     public Optional<String> getDescription() {
-        return Optional.ofNullable(this.description);
+        return Optional.ofNullable(description);
     }
 
     public void setDescription(@Nullable String description) {

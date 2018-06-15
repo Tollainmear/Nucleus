@@ -34,8 +34,7 @@ public class BasicSeenInformationProvider implements NucleusSeenService.SeenInfo
     public boolean hasPermission(@Nonnull CommandSource source, @Nonnull User user) {
         try {
             return source.hasPermission(SeenCommand.EXTENDED_PERMISSION) ||
-                (this.permission != null && !getAdapter().getNodeOrDefault().getSeen().isExtendedPermRequired() && source.hasPermission(
-                        this.permission));
+                (permission != null && !getAdapter().getNodeOrDefault().getSeen().isExtendedPermRequired() && source.hasPermission(permission));
         } catch (Exception e) {
             e.printStackTrace();
 
@@ -46,7 +45,7 @@ public class BasicSeenInformationProvider implements NucleusSeenService.SeenInfo
     @Nonnull
     @Override
     public Collection<Text> getInformation(@Nonnull CommandSource source, @Nonnull User user) {
-        return this.getterFunction.apply(source, user);
+        return getterFunction.apply(source, user);
     }
 
     private synchronized static PlayerInfoConfigAdapter getAdapter() throws Exception {

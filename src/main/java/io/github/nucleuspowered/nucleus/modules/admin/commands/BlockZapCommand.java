@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
@@ -17,10 +16,7 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
-import org.spongepowered.api.data.key.Keys;
-import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.text.Text;
-import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 import org.spongepowered.api.world.BlockChangeFlags;
 import org.spongepowered.api.world.Location;
@@ -36,30 +32,21 @@ public class BlockZapCommand extends AbstractCommand<CommandSource> {
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.onlyOne(GenericArguments.location(Text.of(this.locationKey)))
+            GenericArguments.onlyOne(GenericArguments.location(Text.of(locationKey)))
         };
     }
 
     @Override public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Location<World> location = args.<Location<World>>getOne(this.locationKey).get();
+        Location<World> location = args.<Location<World>>getOne(locationKey).get();
         if (location.getBlockType() == BlockTypes.AIR) {
-            throw new ReturnMessageException(Nucleus.getNucleus()
-                    .getMessageProvider().getTextMessageWithFormat("command.blockzap.alreadyair", location.getPosition().toString(), location.getExtent().getName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.blockzap.alreadyair", location.getPosition().toString(), location.getExtent().getName()));
         }
-        ItemStack item = ItemStack.builder()
-                .fromBlockState(location.getBlock())
-                .build();
-        Text itemText = item.get(Keys.DISPLAY_NAME).orElseGet(() -> Text.of(item)).toBuilder()
-                .onHover(TextActions.showItem(item.createSnapshot()))
-                .build();
-        if (CauseStackHelper.createFrameWithCausesWithReturn(c -> location.setBlock(BlockTypes.AIR.getDefaultState(), BlockChangeFlags.ALL), src)) {
 
-            src.sendMessage(Nucleus.getNucleus()
-                            .getMessageProvider().getTextMessageWithTextFormat("command.blockzap.success", Text.of(location.getPosition().toString()), Text.of(location.getExtent().getName()), itemText));
+        if (CauseStackHelper.createFrameWithCausesWithReturn(c -> location.setBlock(BlockTypes.AIR.getDefaultState(), BlockChangeFlags.ALL), src)) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.blockzap.success", location.getPosition().toString(), location.getExtent().getName()));
             return CommandResult.success();
         }
 
-        throw new ReturnMessageException(Nucleus.getNucleus()
-                .getMessageProvider().getTextMessageWithFormat("command.blockzap.fail", location.getPosition().toString(), location.getExtent().getName()));
+        throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.blockzap.fail", location.getPosition().toString(), location.getExtent().getName()));
     }
 }

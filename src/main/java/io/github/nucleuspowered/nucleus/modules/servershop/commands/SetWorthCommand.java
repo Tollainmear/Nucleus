@@ -50,34 +50,34 @@ public class SetWorthCommand extends AbstractCommand<CommandSource> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.optionalWeak(new ItemAliasArgument(Text.of(this.item))),
-            GenericArguments.choices(Text.of(this.type), ImmutableMap.of("buy", Type.BUY, "sell", Type.SELL)),
-            GenericArguments.doubleNum(Text.of(this.cost))
+            GenericArguments.optionalWeak(new ItemAliasArgument(Text.of(item))),
+            GenericArguments.choices(Text.of(type), ImmutableMap.of("buy", Type.BUY, "sell", Type.SELL)),
+            GenericArguments.doubleNum(Text.of(cost))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        String id = getCatalogTypeFromHandOrArgs(src, this.item, args).getId();
-        Type transactionType = args.<Type>getOne(this.type).get();
-        double newCost = args.<Double>getOne(this.cost).get();
+        String id = getCatalogTypeFromHandOrArgs(src, item, args).getId();
+        Type transactionType = args.<Type>getOne(type).get();
+        double newCost = args.<Double>getOne(cost).get();
         if (newCost < 0) {
             newCost = -1;
         }
 
         // Get the item from the system.
-        ItemDataNode node = this.itemDataService.getDataForItem(id);
+        ItemDataNode node = itemDataService.getDataForItem(id);
 
         // Get the current item worth.
         double currentWorth = transactionType.getter.apply(node);
         String worth;
         String newWorth;
 
-        if (this.econHelper.economyServiceExists()) {
-            worth = this.econHelper.getCurrencySymbol(currentWorth);
-            newWorth = this.econHelper.getCurrencySymbol(newCost);
+        if (econHelper.economyServiceExists()) {
+            worth = econHelper.getCurrencySymbol(currentWorth);
+            newWorth = econHelper.getCurrencySymbol(newCost);
         } else {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.setworth.noeconservice"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.noeconservice"));
             worth = String.valueOf(currentWorth);
             newWorth = String.valueOf(newCost);
         }
@@ -88,10 +88,9 @@ public class SetWorthCommand extends AbstractCommand<CommandSource> {
 
         if (currentWorth == newCost) {
             if (currentWorth < 0) {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.setworth.alreadyunavailable", name, transactionType.getTranslation()));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.alreadyunavailable", name, transactionType.getTranslation()));
             } else {
-                src.sendMessage(Nucleus.getNucleus()
-                        .getMessageProvider().getTextMessageWithFormat("command.setworth.samecost", transactionType.getTranslation(), name, worth));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.samecost", transactionType.getTranslation(), name, worth));
             }
 
             return CommandResult.empty();
@@ -99,17 +98,15 @@ public class SetWorthCommand extends AbstractCommand<CommandSource> {
 
         // Set the item worth.
         transactionType.setter.accept(node, newCost);
-        this.itemDataService.setDataForItem(id, node);
+        itemDataService.setDataForItem(id, node);
 
         // Tell the user.
         if (currentWorth == -1) {
-            src.sendMessage(Nucleus.getNucleus()
-                    .getMessageProvider().getTextMessageWithFormat("command.setworth.success.new", name, transactionType.getTranslation(), newWorth));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.success.new", name, transactionType.getTranslation(), newWorth));
         } else if (newCost == -1) {
-            src.sendMessage(Nucleus.getNucleus()
-                    .getMessageProvider().getTextMessageWithFormat("command.setworth.success.removed", name, transactionType.getTranslation(), worth));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.success.removed", name, transactionType.getTranslation(), worth));
         } else {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.setworth.success.changed", name, transactionType.getTranslation(), newWorth, worth));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setworth.success.changed", name, transactionType.getTranslation(), newWorth, worth));
         }
 
         return CommandResult.success();
@@ -130,7 +127,7 @@ public class SetWorthCommand extends AbstractCommand<CommandSource> {
         }
 
         private String getTranslation() {
-            return Nucleus.getNucleus().getMessageProvider().getMessageWithFormat(this.transactionKey);
+            return Nucleus.getNucleus().getMessageProvider().getMessageWithFormat(transactionKey);
         }
     }
 }

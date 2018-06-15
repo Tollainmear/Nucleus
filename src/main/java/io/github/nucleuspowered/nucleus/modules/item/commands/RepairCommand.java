@@ -29,7 +29,6 @@ import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.item.inventory.ItemStackSnapshot;
 import org.spongepowered.api.item.inventory.entity.Hotbar;
 import org.spongepowered.api.item.inventory.equipment.EquipmentInventory;
-import org.spongepowered.api.item.inventory.query.QueryOperationTypes;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.action.TextActions;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -48,7 +47,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
     private boolean whitelist = false;
     private List<ItemType> restrictions = new ArrayList<>();
 
-    @Override public void onReload() {
+    @Override public void onReload() throws Exception {
         this.whitelist = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(ItemConfigAdapter.class)
                 .getNodeOrDefault().getRepairConfig().isWhitelist();
         this.restrictions = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(ItemConfigAdapter.class)
@@ -59,10 +58,10 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
         return new CommandElement[]{
                 GenericArguments.flags()
                         .flag("m", "-mainhand")
-                        .permissionFlag(this.permissions.getPermissionWithSuffix("flag.all"), "a", "-all")
-                        .permissionFlag(this.permissions.getPermissionWithSuffix("flag.hotbar"), "h", "-hotbar")
-                        .permissionFlag(this.permissions.getPermissionWithSuffix("flag.equip"), "e", "-equip")
-                        .permissionFlag(this.permissions.getPermissionWithSuffix("flag.offhand"), "o", "-offhand")
+                        .permissionFlag(permissions.getPermissionWithSuffix("flag.all"), "a", "-all")
+                        .permissionFlag(permissions.getPermissionWithSuffix("flag.hotbar"), "h", "-hotbar")
+                        .permissionFlag(permissions.getPermissionWithSuffix("flag.equip"), "e", "-equip")
+                        .permissionFlag(permissions.getPermissionWithSuffix("flag.offhand"), "o", "-offhand")
                         .buildWith(GenericArguments.none())
         };
     }
@@ -86,7 +85,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
         }};
         EnumMap<ResultType, ItemStackSnapshot> lastItem = new EnumMap<>(ResultType.class);
 
-        boolean checkRestrictions = !pl.hasPermission(this.permissions.getPermissionWithSuffix("exempt.restriction"));
+        boolean checkRestrictions = !pl.hasPermission(permissions.getPermissionWithSuffix("exempt.restriction"));
 
         String location = "inventory";
         if (args.hasAny("a")) {
@@ -131,18 +130,16 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
 
             // Repair worn equipment
             if (repairEquip) {
-                repairInventory(pl.getInventory()
-                        .query(QueryOperationTypes.INVENTORY_TYPE.of(EquipmentInventory.class)), checkRestrictions, resultCount, lastItem);
+                repairInventory(pl.getInventory().query(EquipmentInventory.class), checkRestrictions, resultCount, lastItem);
             }
 
             // Repair Hotbar
             if (repairHotbar) {
-                repairInventory(pl.getInventory()
-                        .query(QueryOperationTypes.INVENTORY_TYPE.of(Hotbar.class)), checkRestrictions, resultCount, lastItem);
+                repairInventory(pl.getInventory().query(Hotbar.class), checkRestrictions, resultCount, lastItem);
             }
         }
 
-        location = Nucleus.getNucleus().getMessageProvider().getMessageFromKey("command.repair.location." + location).orElse("inventory");
+        location = plugin.getMessageProvider().getMessageFromKey("command.repair.location." + location).orElse("inventory");
 
         if (resultCount.get(ResultType.SUCCESS) == 0 && resultCount.get(ResultType.ERROR) == 0
                 && resultCount.get(ResultType.NO_DURABILITY) == 0 && resultCount.get(ResultType.RESTRICTED) == 0) {
@@ -153,7 +150,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
                     && resultCount.get(ResultType.ERROR) == 0 && resultCount.get(ResultType.RESTRICTED) == 0) {
                 if (resultCount.get(ResultType.NO_DURABILITY) == 1) {
                     ItemStackSnapshot item = lastItem.get(ResultType.NO_DURABILITY);
-                    pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat(
+                    pl.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat(
                             "command.repair.nodurability.single",
                             item.get(Keys.DISPLAY_NAME).orElse(Text.of(item.getTranslation().get())).toBuilder()
                                     .onHover(TextActions.showItem(item))
@@ -162,7 +159,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
                             Text.of(location)
                     ));
                 } else {
-                    pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(
+                    pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat(
                             "command.repair.nodurability.multiple",
                             resultCount.get(ResultType.NO_DURABILITY).toString(), pl.getName(), location
                     ));
@@ -172,7 +169,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
             // Success Message
             if (resultCount.get(ResultType.SUCCESS) == 1) {
                 ItemStackSnapshot item = lastItem.get(ResultType.SUCCESS);
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat(
                         "command.repair.success.single",
                         item.get(Keys.DISPLAY_NAME).orElse(Text.of(item.getTranslation().get())).toBuilder()
                                 .onHover(TextActions.showItem(item))
@@ -181,7 +178,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
                         Text.of(location)
                 ));
             } else if (resultCount.get(ResultType.SUCCESS) > 1) {
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat(
                         "command.repair.success.multiple",
                         resultCount.get(ResultType.SUCCESS).toString(), pl.getName(), location
                 ));
@@ -190,7 +187,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
             // Error Message
             if (resultCount.get(ResultType.ERROR) == 1) {
                 ItemStackSnapshot item = lastItem.get(ResultType.ERROR);
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat(
                         "command.repair.error.single",
                         item.get(Keys.DISPLAY_NAME).orElse(Text.of(item.getTranslation().get())).toBuilder()
                                 .onHover(TextActions.showItem(item))
@@ -199,7 +196,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
                         Text.of(location)
                 ));
             } else if (resultCount.get(ResultType.ERROR) > 1) {
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat(
                         "command.repair.error.multiple",
                         resultCount.get(ResultType.ERROR).toString(), pl.getName(), location
                 ));
@@ -208,7 +205,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
             // Restriction Message
             if (resultCount.get(ResultType.RESTRICTED) == 1) {
                 ItemStackSnapshot item = lastItem.get(ResultType.RESTRICTED);
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat(
                         "command.repair.restricted.single",
                         item.get(Keys.DISPLAY_NAME).orElse(Text.of(item.getTranslation().get())).toBuilder()
                                 .onHover(TextActions.showItem(item))
@@ -217,7 +214,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
                         Text.of(location)
                 ));
             } else if (resultCount.get(ResultType.RESTRICTED) > 1) {
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat(
                         "command.repair.restricted.multiple",
                         resultCount.get(ResultType.RESTRICTED).toString(), pl.getName(), location
                 ));
@@ -243,7 +240,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
     }
 
     private RepairResult repairStack(ItemStack stack, boolean checkRestrictions) {
-        if (checkRestrictions && (this.whitelist && !this.restrictions.contains(stack.getType()) || this.restrictions.contains(stack.getType()))) {
+        if (checkRestrictions && (whitelist && !restrictions.contains(stack.getType()) || restrictions.contains(stack.getType()))) {
             return new RepairResult(stack, ResultType.RESTRICTED);
         }
         if (stack.get(DurabilityData.class).isPresent()) {
@@ -274,7 +271,7 @@ public class RepairCommand extends AbstractCommand<Player> implements Reloadable
         }
 
         public boolean isSuccessful() {
-            return this.type == ResultType.SUCCESS;
+            return type == ResultType.SUCCESS;
         }
     }
 }

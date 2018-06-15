@@ -15,13 +15,13 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.filter.Getter;
 import org.spongepowered.api.event.network.ClientConnectionEvent;
 
-public class MuteLogoutConditionalListener implements ListenerBase.Conditional {
+public class MuteLogoutConditionalListener extends ListenerBase implements ListenerBase.Conditional {
 
     @Listener
     public void onLogout(ClientConnectionEvent.Disconnect event, @Getter("getTargetEntity") Player player) {
-        Nucleus.getNucleus().getUserDataManager().get(player).ifPresent(y -> y.get(MuteUserDataModule.class).getMuteData().ifPresent(x -> {
+        plugin.getUserDataManager().get(player).ifPresent(y -> y.get(MuteUserDataModule.class).getMuteData().ifPresent(x -> {
                 x.getRemainingTime().ifPresent(x::setTimeFromNextLogin);
-            Nucleus.getNucleus().getUserDataManager().getUnchecked(player).get(MuteUserDataModule.class).setMuteData(x);
+                plugin.getUserDataManager().getUnchecked(player).get(MuteUserDataModule.class).setMuteData(x);
             }));
     }
 

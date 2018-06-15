@@ -5,11 +5,11 @@
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.Sponge;
@@ -31,22 +31,23 @@ import java.util.function.Supplier;
 
 @NonnullByDefault
 @NoModifiers
-@Permissions(prefix = "world", suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(prefix = "world", suggestedLevel = SuggestedLevel.NONE)
 @RegisterCommand(value = {"clone", "copy"}, subcommandOf = WorldCommand.class)
 public class CloneWorldCommand extends AbstractCommand<CommandSource> {
 
+    private final String worldKey = "world to copy";
     private final String newKey = "new name";
 
     @Override protected CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.WORLD_PROPERTIES_ALL,
-                GenericArguments.string(Text.of(this.newKey))
+                new NucleusWorldPropertiesArgument(Text.of(worldKey), NucleusWorldPropertiesArgument.Type.ALL),
+                GenericArguments.string(Text.of(newKey))
         };
     }
 
     @Override
     protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        WorldProperties worldToCopy = args.<WorldProperties>getOne(NucleusParameters.Keys.WORLD).get();
+        WorldProperties worldToCopy = args.<WorldProperties>getOne(this.worldKey).get();
         final String oldName = worldToCopy.getWorldName();
         final String newName = args.<String>getOne(this.newKey).get();
         if (Sponge.getServer().getWorldProperties(newName).isPresent()) {

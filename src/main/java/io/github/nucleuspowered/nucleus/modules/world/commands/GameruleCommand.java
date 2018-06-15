@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -46,7 +45,7 @@ public class GameruleCommand extends AbstractCommand<CommandSource> {
         WorldProperties worldProperties = getWorldFromUserOrArgs(src, worldKey, args);
         Map<String, String> gameRules = worldProperties.getGameRules();
 
-        String message = Nucleus.getNucleus().getMessageProvider().getMessageWithFormat("command.world.gamerule.key");
+        String message = plugin.getMessageProvider().getMessageWithFormat("command.world.gamerule.key");
         List<Text> text = gameRules.entrySet().stream().sorted(Comparator.comparing(Map.Entry::getKey))
             .map(x -> Text.of(
                 TextActions.suggestCommand(String.format("/world gamerule set %s %s ", worldProperties.getWorldName(), x.getKey())),
@@ -55,7 +54,7 @@ public class GameruleCommand extends AbstractCommand<CommandSource> {
             .collect(Collectors.toList());
 
         Util.getPaginationBuilder(src)
-            .title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.gamerule.header", worldProperties.getWorldName()))
+            .title(plugin.getMessageProvider().getTextMessageWithFormat("command.world.gamerule.header", worldProperties.getWorldName()))
             .contents(text)
             .sendTo(src);
 

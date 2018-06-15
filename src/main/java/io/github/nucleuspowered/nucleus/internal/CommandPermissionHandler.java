@@ -50,23 +50,22 @@ public class CommandPermissionHandler {
     private final boolean justReturnTrue;
 
     public CommandPermissionHandler(Class<? extends AbstractCommand> cab, Nucleus plugin) {
-        this.justReturnTrue = cab.isAnnotationPresent(NoPermissions.class);
+        justReturnTrue = cab.isAnnotationPresent(NoPermissions.class);
 
         // If there are no permissions to assign, we just return true.
-        if (this.justReturnTrue) {
-            this.prefix = "";
-            this.base = "";
-            this.warmup = "";
-            this.cooldown = "";
-            this.cost = "";
-            this.others = "";
+        if (justReturnTrue) {
+            prefix = "";
+            base = "";
+            warmup = "";
+            cooldown = "";
+            cost = "";
+            others = "";
             return;
         }
 
         Permissions c = cab.getAnnotation(Permissions.class);
         if (c == null) {
             c = new Permissions() {
-
                 @Override
                 public String[] value() {
                     return new String[0];
@@ -126,42 +125,42 @@ public class CommandPermissionHandler {
             sb.append(c.suffix()).append(".");
         }
 
-        this.prefix = sb.toString();
+        prefix = sb.toString();
 
-        this.base = this.prefix + "base";
+        base = prefix + "base";
 
         if (co.subcommandOf() != AbstractCommand.class) {
             command = String.format("%s %s", co.subcommandOf().getAnnotation(RegisterCommand.class).value()[0], command);
         }
 
-        this.warmup = this.prefix + "exempt.warmup";
-        this.cooldown = this.prefix + "exempt.cooldown";
-        this.cost = this.prefix + "exempt.cost";
-        this.others = this.prefix + "others";
+        warmup = prefix + "exempt.warmup";
+        cooldown = prefix + "exempt.cooldown";
+        cost = prefix + "exempt.cost";
+        others = prefix + "others";
 
         if (!cab.isAnnotationPresent(NoDocumentation.class)) {
-            this.mssl.put(this.base,
+            mssl.put(base,
                 new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.base", command), c.suggestedLevel()));
 
             if (c.supportsOthers()) {
-                this.mssl.put(this.others, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.others", co.value()[0]),
+                mssl.put(others, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.others", co.value()[0]),
                     SuggestedLevel.ADMIN));
             }
 
             if (!cab.isAnnotationPresent(NoModifiers.class)) {
                 if (!cab.isAnnotationPresent(NoWarmup.class) || cab.getAnnotation(NoWarmup.class).generatePermissionDocs()) {
-                    this.mssl.put(this.warmup, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.exempt.warmup", command),
+                    mssl.put(warmup, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.exempt.warmup", command),
                             SuggestedLevel.ADMIN));
                 }
 
                 if (!cab.isAnnotationPresent(NoCooldown.class)) {
-                    this.mssl.put(this.cooldown,
+                    mssl.put(cooldown,
                             new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.exempt.cooldown", command),
                                     SuggestedLevel.ADMIN));
                 }
 
                 if (!cab.isAnnotationPresent(NoCost.class)) {
-                    this.mssl.put(this.cost, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.exempt.cost", command),
+                    mssl.put(cost, new PermissionInformation(plugin.getMessageProvider().getMessageWithFormat("permission.exempt.cost", command),
                             SuggestedLevel.ADMIN));
                 }
             }
@@ -171,39 +170,39 @@ public class CommandPermissionHandler {
     }
 
     public boolean isPassthrough() {
-        return this.justReturnTrue;
+        return justReturnTrue;
     }
 
     public String getBase() {
-        return this.base;
+        return base;
     }
 
     public String getOthers() {
-        return this.others;
+        return others;
     }
 
     public boolean testBase(Subject src) {
-        return test(src, this.base);
+        return test(src, base);
     }
 
     public boolean testWarmupExempt(Subject src) {
-        return test(src, this.warmup);
+        return test(src, warmup);
     }
 
     public boolean testCooldownExempt(Subject src) {
-        return test(src, this.cooldown);
+        return test(src, cooldown);
     }
 
     public boolean testCostExempt(Subject src) {
-        return test(src, this.cost);
+        return test(src, cost);
     }
 
     public boolean testOthers(Subject src) {
-        return test(src, this.others);
+        return test(src, others);
     }
 
     public void registerPermissionSuffix(String suffix, PermissionInformation pi) {
-        this.mssl.put(this.prefix + suffix, pi);
+        this.mssl.put(prefix + suffix, pi);
     }
 
     public void registerPermission(String permission, PermissionInformation pi) {
@@ -215,7 +214,7 @@ public class CommandPermissionHandler {
             src = ((User) src).getPlayer().get();
         }
 
-        check(src, this.prefix + suffix, exception);
+        check(src, prefix + suffix, exception);
     }
 
     public boolean testSuffix(Subject src, String suffix) {
@@ -223,7 +222,7 @@ public class CommandPermissionHandler {
             src = ((User) src).getPlayer().get();
         }
 
-        return test(src, this.prefix + suffix);
+        return test(src, prefix + suffix);
     }
 
     /**
@@ -244,15 +243,15 @@ public class CommandPermissionHandler {
     }
 
     public String getPermissionWithSuffix(String suffix) {
-        return this.prefix + suffix;
+        return prefix + suffix;
     }
 
     public Map<String, PermissionInformation> getSuggestedPermissions() {
-        return ImmutableMap.copyOf(this.mssl);
+        return ImmutableMap.copyOf(mssl);
     }
 
     private boolean test(Subject src, String permission) {
-        return this.justReturnTrue || src.hasPermission(permission);
+        return justReturnTrue || src.hasPermission(permission);
     }
 
     private <X extends Exception> void check(Subject src, String permission, Supplier<X> exception) throws X {

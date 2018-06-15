@@ -4,7 +4,7 @@
  */
 package io.github.nucleuspowered.nucleus.argumentparsers;
 
-import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Lists;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.ArgumentParseException;
@@ -36,7 +36,7 @@ public class ExperienceLevelArgument extends CommandElement {
     @Nullable
     @Override
     protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
-        Matcher m = this.argumentPattern.matcher(args.next());
+        Matcher m = argumentPattern.matcher(args.next());
         if (m.find(0) && m.group(1) != null || m.group(3) != null ) {
             return Integer.parseInt(m.group(2));
         }
@@ -46,6 +46,6 @@ public class ExperienceLevelArgument extends CommandElement {
 
     @Override
     public List<String> complete(CommandSource src, CommandArgs args, CommandContext context) {
-        return ImmutableList.of();
+        return Lists.newArrayList();
     }
 }

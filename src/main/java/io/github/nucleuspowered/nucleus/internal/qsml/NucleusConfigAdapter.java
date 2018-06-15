@@ -37,12 +37,12 @@ public abstract class NucleusConfigAdapter<R> extends TypedAbstractConfigAdapter
 
         @Override
         protected R convertFromConfigurateNode(ConfigurationNode node) throws ObjectMappingException {
-            return node.getValue(this.typeToken, getDefaultObject());
+            return node.getValue(typeToken, getDefaultObject());
         }
 
         @Override
         protected ConfigurationNode insertIntoConfigurateNode(ConfigurationNode newNode, R data) throws ObjectMappingException {
-            return newNode.setValue(this.typeToken, data);
+            return newNode.setValue(typeToken, data);
         }
     }
 
@@ -58,9 +58,9 @@ public abstract class NucleusConfigAdapter<R> extends TypedAbstractConfigAdapter
 
         @Override
         @SuppressWarnings("unchecked")
-        public R getDefaultObject() {
+        protected R getDefaultObject() {
             try {
-                return (R) this.typeToken.getRawType().newInstance();
+                return (R) typeToken.getRawType().newInstance();
             } catch (InstantiationException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }

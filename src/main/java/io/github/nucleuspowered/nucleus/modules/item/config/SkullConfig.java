@@ -14,6 +14,6 @@ public class SkullConfig {
     private boolean useMinecraftCommand = false;
 
     public boolean isUseMinecraftCommand() {
-        return this.useMinecraftCommand;
+        return useMinecraftCommand;
     }
 }

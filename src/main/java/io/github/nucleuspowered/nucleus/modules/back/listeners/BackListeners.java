@@ -24,7 +24,7 @@ import org.spongepowered.api.event.filter.type.Exclude;
 
 import javax.annotation.Nullable;
 
-public class BackListeners implements Reloadable, ListenerBase {
+public class BackListeners extends ListenerBase implements Reloadable {
 
     public static final String ON_TELEPORT = "targets.teleport";
     public static final String ON_DEATH = "targets.death";
@@ -36,22 +36,22 @@ public class BackListeners implements Reloadable, ListenerBase {
 
     private CommandPermissionHandler s = Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(BackCommand.class);
 
-    @Override public void onReload() {
+    @Override public void onReload() throws Exception {
         this.backConfig = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(BackConfigAdapter.class).getNodeOrDefault();
     }
 
     @Listener
     @Exclude(MoveEntityEvent.Teleport.Portal.class) // Don't set /back on a portal.
     public void onTeleportPlayer(MoveEntityEvent.Teleport event, @Getter("getTargetEntity") Player pl) {
-        if (this.backConfig.isOnTeleport() && check(event) && getLogBack(pl) && this.s.testSuffix(pl, ON_TELEPORT)) {
-            this.handler.setLastLocation(pl, event.getFromTransform());
+        if (backConfig.isOnTeleport() && check(event) && getLogBack(pl) && s.testSuffix(pl, ON_TELEPORT)) {
+            handler.setLastLocation(pl, event.getFromTransform());
         }
     }
 
     @Listener
     public void onPortalPlayer(MoveEntityEvent.Teleport.Portal event, @Getter("getTargetEntity") Player pl) {
-        if (this.backConfig.isOnPortal() && check(event) && getLogBack(pl) && this.s.testSuffix(pl, ON_PORTAL)) {
-            this.handler.setLastLocation(pl, event.getFromTransform());
+        if (backConfig.isOnPortal() && check(event) && getLogBack(pl) && s.testSuffix(pl, ON_PORTAL)) {
+            handler.setLastLocation(pl, event.getFromTransform());
         }
     }
 
@@ -63,8 +63,8 @@ public class BackListeners implements Reloadable, ListenerBase {
         }
 
         Player pl = (Player)e;
-        if (this.backConfig.isOnDeath() && getLogBack(pl) && this.s.testSuffix(pl, ON_DEATH)) {
-            this.handler.setLastLocation(pl, event.getTargetEntity().getTransform());
+        if (backConfig.isOnDeath() && getLogBack(pl) && s.testSuffix(pl, ON_DEATH)) {
+            handler.setLastLocation(pl, event.getTargetEntity().getTransform());
         }
     }
 
@@ -73,6 +73,6 @@ public class BackListeners implements Reloadable, ListenerBase {
     }
 
     private boolean getLogBack(Player player) {
-        return !(this.njs != null && this.njs.isPlayerJailed(player)) && this.handler.isLoggingLastLocation(player);
+        return !(njs != null && njs.isPlayerJailed(player)) && handler.isLoggingLastLocation(player);
     }
 }

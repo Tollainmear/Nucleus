@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -16,20 +15,20 @@ import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
-@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.NONE)
 @RunAsync
 @NoModifiers
 @RegisterCommand(value = "rebuildusercache", subcommandOf = NucleusCommand.class)
 @NonnullByDefault
 public class RebuildUserCacheCommand extends AbstractCommand<CommandSource> {
 
-    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) {
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.start"));
-        if (Nucleus.getNucleus().getUserCacheService().fileWalk()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.end"));
+    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.start"));
+        if (plugin.getUserCacheService().fileWalk()) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.end"));
             return CommandResult.success();
         } else {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.fail"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.rebuild.fail"));
             return CommandResult.empty();
         }
     }

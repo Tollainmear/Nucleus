@@ -23,18 +23,18 @@ public class LoggerTargetConfig {
     private boolean logOther = false;
 
     public boolean isLogPlayer() {
-        return this.logPlayer;
+        return logPlayer;
     }
 
     public boolean isLogCommandBlock() {
-        return this.logCommandBlock;
+        return logCommandBlock;
     }
 
     public boolean isLogConsole() {
-        return this.logConsole;
+        return logConsole;
     }
 
     public boolean isLogOther() {
-        return this.logOther;
+        return logOther;
     }
 }

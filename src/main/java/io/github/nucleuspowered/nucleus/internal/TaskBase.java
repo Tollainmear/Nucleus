@@ -19,13 +19,13 @@ import java.util.function.Consumer;
 @EntryPoint
 @NonnullByDefault
 @Store(Constants.RUNNABLE)
-public interface TaskBase extends Consumer<Task>, InternalServiceManagerTrait {
+public abstract class TaskBase implements Consumer<Task>, InternalServiceManagerTrait {
 
-    boolean isAsync();
+    public abstract boolean isAsync();
 
-    Duration interval();
+    public abstract Duration interval();
 
-    default Map<String, PermissionInformation> getPermissions() {
+    public Map<String, PermissionInformation> getPermissions() {
         return new HashMap<>();
     }
 }

@@ -65,7 +65,7 @@ public final class MuteData extends EndTimestamp implements MuteInfo {
     }
 
     @Override public String getReason() {
-        return this.reason;
+        return reason;
     }
 
     /**
@@ -74,34 +74,34 @@ public final class MuteData extends EndTimestamp implements MuteInfo {
      * @return An {@link Instant}
      */
     public Optional<Instant> getEndTimestamp() {
-        if (this.endtimestamp == null) {
+        if (endtimestamp == null) {
             return Optional.empty();
         }
 
-        return Optional.of(Instant.ofEpochSecond(this.endtimestamp));
+        return Optional.of(Instant.ofEpochSecond(endtimestamp));
     }
 
     public Optional<Instant> getCreationInstant() {
-        return this.creationTime > 0 ? Optional.of(Instant.ofEpochSecond(this.creationTime)) : Optional.empty();
+        return creationTime > 0 ? Optional.of(Instant.ofEpochSecond(creationTime)) : Optional.empty();
     }
 
     public long getCreationTime() {
-        return this.creationTime;
+        return creationTime;
     }
 
     @Override public Optional<UUID> getMuter() {
-        return this.muter.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(this.muter);
+        return muter.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(this.muter);
     }
 
     public UUID getMuterInternal() {
-        return this.muter;
+        return muter;
     }
 
     public Optional<Duration> getTimeFromNextLogin() {
-        if (this.timeFromNextLogin == null) {
+        if (timeFromNextLogin == null) {
             return Optional.empty();
         }
 
-        return Optional.of(Duration.of(this.timeFromNextLogin, ChronoUnit.SECONDS));
+        return Optional.of(Duration.of(timeFromNextLogin, ChronoUnit.SECONDS));
     }
 }

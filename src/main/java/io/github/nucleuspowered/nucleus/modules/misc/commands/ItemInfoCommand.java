@@ -59,8 +59,8 @@ public class ItemInfoCommand extends AbstractCommand<Player> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.flags().permissionFlag(this.permissions.getPermissionWithSuffix("extended"), "e", "-extended")
-            .buildWith(GenericArguments.optional(new ItemAliasArgument(Text.of(this.key))))
+                GenericArguments.flags().permissionFlag(permissions.getPermissionWithSuffix("extended"), "e", "-extended")
+            .buildWith(GenericArguments.optional(new ItemAliasArgument(Text.of(key))))
         };
     }
 
@@ -73,7 +73,7 @@ public class ItemInfoCommand extends AbstractCommand<Player> {
 
     @Override
     public CommandResult executeCommand(Player player, CommandContext args) throws Exception {
-        Optional<CatalogType> catalogTypeOptional = args.getOne(this.key);
+        Optional<CatalogType> catalogTypeOptional = args.getOne(key);
         ItemStack it;
         if (catalogTypeOptional.isPresent()) {
             CatalogType ct = catalogTypeOptional.get();
@@ -81,24 +81,23 @@ public class ItemInfoCommand extends AbstractCommand<Player> {
                 it = ((ItemType) ct).getTemplate().createStack();
             } else {
                 BlockState bs = ((BlockState) ct);
-                it = bs.getType().getItem().orElseThrow(() -> new CommandException(
-                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.invalidblockstate"))).getTemplate().createStack();
+                it = bs.getType().getItem().orElseThrow(() -> new CommandException(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.invalidblockstate"))).getTemplate().createStack();
                 it.offer(Keys.ITEM_BLOCKSTATE, bs);
             }
         } else if (player.getItemInHand(HandTypes.MAIN_HAND).isPresent()) {
             it = player.getItemInHand(HandTypes.MAIN_HAND).get();
         } else {
-            player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.none"));
+            player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.none"));
             return CommandResult.empty();
         }
 
         final List<Text> lt = new ArrayList<>();
         String id = it.getType().getId().toLowerCase();
-        lt.add(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.id", it.getType().getId(), it.getTranslation().get()));
+        lt.add(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.id", it.getType().getId(), it.getTranslation().get()));
 
         Optional<BlockState> obs = it.get(Keys.ITEM_BLOCKSTATE);
         if (obs.isPresent()) {
-            lt.add(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.extendedid", obs.get().getId()));
+            lt.add(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.extendedid", obs.get().getId()));
             id = obs.get().getId().toLowerCase();
         }
 
@@ -120,15 +119,15 @@ public class ItemInfoCommand extends AbstractCommand<Player> {
             });
         }
 
-        ItemDataNode itemDataNode = this.itemDataService.getDataForItem(id);
+        ItemDataNode itemDataNode = itemDataService.getDataForItem(id);
 
         // /buy and /sell prices
-        if (this.econHelper.economyServiceExists() && Nucleus.getNucleus().getModuleContainer().isModuleLoaded(ServerShopModule.ID)) {
+        if (econHelper.economyServiceExists() && plugin.getModuleContainer().isModuleLoaded(ServerShopModule.ID)) {
             boolean space = false;
             double buyPrice = itemDataNode.getServerBuyPrice();
             if (buyPrice >= 0) {
                 lt.add(Text.EMPTY);
-                lt.add(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.buyprice", this.econHelper.getCurrencySymbol(buyPrice)));
+                lt.add(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.buyprice", econHelper.getCurrencySymbol(buyPrice)));
                 space = true;
             }
 
@@ -138,28 +137,28 @@ public class ItemInfoCommand extends AbstractCommand<Player> {
                     lt.add(Text.EMPTY);
                 }
 
-                lt.add(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.sellprice", this.econHelper.getCurrencySymbol(sellPrice)));
+                lt.add(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.sellprice", econHelper.getCurrencySymbol(sellPrice)));
             }
         }
 
         List<String> aliases = itemDataNode.getAliases();
         if (!aliases.isEmpty()) {
             lt.add(Text.EMPTY);
-            lt.add(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.list.aliases"));
+            lt.add(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.list.aliases"));
 
             Text.Builder tb = Text.builder();
             Iterator<String> iterator = aliases.iterator();
             tb.append(Text.of(TextColors.YELLOW, iterator.next()));
 
             while (iterator.hasNext()) {
-                tb.append(this.comma, Text.of(TextColors.YELLOW, iterator.next()));
+                tb.append(comma, Text.of(TextColors.YELLOW, iterator.next()));
             }
 
             lt.add(tb.build());
         }
 
         Sponge.getServiceManager().provideUnchecked(PaginationService.class).builder().contents(lt).padding(Text.of(TextColors.GREEN, "-"))
-                .title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.iteminfo.list.header")).sendTo(player);
+                .title(plugin.getMessageProvider().getTextMessageWithFormat("command.iteminfo.list.header")).sendTo(player);
         return CommandResult.success();
     }
 }

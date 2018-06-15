@@ -52,7 +52,7 @@ public class NoteArgument extends CommandElement {
             throw args.createError(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("args.note.noindex", user.getName()));
         }
 
-        List<NoteData> noteData = this.handler.getNotesInternal(user);
+        List<NoteData> noteData = handler.getNotesInternal(user);
         int index;
         try {
             index = Integer.parseInt(optIndex.get()) - 1;
@@ -63,8 +63,11 @@ public class NoteArgument extends CommandElement {
             throw args.createError(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("args.note.indexnotnumber"));
         }
 
-        return new Result(user, noteData.get(index));
+        if (!noteData.isEmpty()) {
+            return new Result(user, noteData.get(index));
+        }
 
+        throw args.createError(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("args.note.nousernotes",user.getName()));
     }
 
     @Override

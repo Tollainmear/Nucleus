@@ -66,7 +66,7 @@ public abstract class WarnEvent extends AbstractEvent implements NucleusWarnEven
         }
 
         @Override public Optional<UUID> getWarner() {
-            return Optional.ofNullable(this.warner);
+            return Optional.ofNullable(warner);
         }
     }
 }

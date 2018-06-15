@@ -9,6 +9,7 @@ import io.github.nucleuspowered.nucleus.internal.annotations.RegisterService;
 import io.github.nucleuspowered.nucleus.internal.qsml.module.ConfigurableModule;
 import io.github.nucleuspowered.nucleus.modules.servershop.config.ServerShopConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.servershop.services.ItemWorthService;
+import org.spongepowered.api.Sponge;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 
 @RegisterService(value = ItemWorthService.class, apiService = NucleusServerShopService.class)

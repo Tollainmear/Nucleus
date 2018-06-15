@@ -88,9 +88,9 @@ public final class TextFileController {
      * @throws IOException Thrown if there is an issue getting the file.
      */
     public void load() throws IOException {
-        if (this.asset != null && !Files.exists(this.fileLocation)) {
+        if (asset != null && !Files.exists(fileLocation)) {
             // Create the file
-            this.asset.copyToFile(this.fileLocation);
+            asset.copyToFile(fileLocation);
         }
 
         List<String> fileContents = Lists.newArrayList();
@@ -99,7 +99,7 @@ public final class TextFileController {
         MalformedInputException exception = null;
         for (Charset charset : characterSetsToTest) {
             try {
-                fileContents.addAll(Files.readAllLines(this.fileLocation, charset));
+                fileContents.addAll(Files.readAllLines(fileLocation, charset));
                 exception = null;
                 break;
             } catch (MalformedInputException ex) {
@@ -112,7 +112,7 @@ public final class TextFileController {
             throw exception;
         }
 
-        this.fileTimeStamp = Files.getLastModifiedTime(this.fileLocation).toMillis();
+        this.fileTimeStamp = Files.getLastModifiedTime(fileLocation).toMillis();
         this.fileContents.clear();
         this.fileContents.addAll(fileContents);
         this.textTemplates.clear();
@@ -155,12 +155,12 @@ public final class TextFileController {
      */
     private ImmutableList<NucleusTextTemplateImpl> getFileContentsAsText() {
         checkFileStamp();
-        if (this.textTemplates.isEmpty()) {
-            List<String> contents = Lists.newArrayList(this.fileContents);
+        if (textTemplates.isEmpty()) {
+            List<String> contents = Lists.newArrayList(fileContents);
             if (this.getTitle) {
                 this.title = getTitleFromStrings(contents);
 
-                if (this.title != null) {
+                if (title != null) {
                     contents.remove(0);
 
                     Iterator<String> i = contents.iterator();
@@ -175,10 +175,10 @@ public final class TextFileController {
                 }
             }
 
-            contents.forEach(x -> this.textTemplates.add(NucleusTextTemplateFactory.createFromAmpersandString(x)));
+            contents.forEach(x -> textTemplates.add(NucleusTextTemplateFactory.createFromAmpersandString(x)));
         }
 
-        return ImmutableList.copyOf(this.textTemplates);
+        return ImmutableList.copyOf(textTemplates);
     }
 
     @Nullable private NucleusTextTemplate getTitleFromStrings(List<String> info) {
@@ -200,7 +200,7 @@ public final class TextFileController {
 
     private void checkFileStamp() {
         try {
-            if (this.fileContents.isEmpty() || Files.getLastModifiedTime(this.fileLocation).toMillis() > this.fileTimeStamp) {
+            if (this.fileContents.isEmpty() || Files.getLastModifiedTime(fileLocation).toMillis() > this.fileTimeStamp) {
                 load();
             }
         } catch (IOException e) {

@@ -5,8 +5,8 @@
 package io.github.nucleuspowered.nucleus.dataservices.dataproviders;
 
 import com.google.common.reflect.TypeToken;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import ninja.leaping.configurate.loader.ConfigurationLoader;
+import org.slf4j.Logger;
 
 import java.nio.file.Path;
 import java.util.function.Function;
@@ -17,7 +17,7 @@ class FileChangingConfigurateDataProvider<T> implements DataProvider.FileChangin
     private final Supplier<DataProvider<T>> providerSupplier;
     private DataProvider<T> provider;
 
-    @SuppressWarnings("unchecked") FileChangingConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>> loaderProvider, Supplier<Path> file) {
+    @SuppressWarnings("unchecked") FileChangingConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>> loaderProvider, Supplier<Path> file, Logger logger) {
         this(type, loaderProvider, () -> {
             try {
                 return (T)type.getRawType().newInstance();
@@ -25,11 +25,11 @@ class FileChangingConfigurateDataProvider<T> implements DataProvider.FileChangin
                 e.printStackTrace();
                 return null;
             }
-        }, file);
+        }, file, true, logger);
     }
 
-    FileChangingConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>>  loaderProvider, Supplier<T> defaultSupplier, Supplier<Path> file) {
-        this.providerSupplier = () -> new ConfigurateDataProvider<>(type, loaderProvider, defaultSupplier, file.get(), Nucleus.getNucleus().getLogger());
+    FileChangingConfigurateDataProvider(TypeToken<T> type, Function<Path, ConfigurationLoader<?>>  loaderProvider, Supplier<T> defaultSupplier, Supplier<Path> file, boolean requiresChildren, Logger logger) {
+        this.providerSupplier = () -> new ConfigurateDataProvider<>(type, loaderProvider, defaultSupplier, file.get(), requiresChildren, logger);
     }
 
     public void onChange() {

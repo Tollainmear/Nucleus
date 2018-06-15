@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -34,10 +33,8 @@ public class PrintPermsCommand extends AbstractCommand<CommandSource> {
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Map<String, PermissionInformation> l = Nucleus.getNucleus().getPermissionRegistry().getPermissions();
+        Map<String, PermissionInformation> l = plugin.getPermissionRegistry().getPermissions();
         List<String> notsuggested =
-                l.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.NONE).map(Map.Entry::getKey).collect(Collectors.toList());
-        List<String> owner =
                 l.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.NONE).map(Map.Entry::getKey).collect(Collectors.toList());
         List<String> admin =
                 l.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.ADMIN).map(Map.Entry::getKey).collect(Collectors.toList());
@@ -63,12 +60,6 @@ public class PrintPermsCommand extends AbstractCommand<CommandSource> {
         notsuggested.stream().sorted().forEach(permWriter);
         f.newLine();
 
-        f.write("Owner");
-        f.write("-----");
-        f.newLine();
-        owner.stream().sorted().forEach(permWriter);
-        f.newLine();
-
         f.write("Admin");
         f.write("-----");
         f.newLine();
@@ -89,7 +80,7 @@ public class PrintPermsCommand extends AbstractCommand<CommandSource> {
         f.flush();
         f.close();
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.printperms", file));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.printperms", file));
         return CommandResult.success();
     }
 }

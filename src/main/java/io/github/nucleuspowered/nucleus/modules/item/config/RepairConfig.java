@@ -21,10 +21,10 @@ public class RepairConfig {
     private List<ItemType> restrictions = new ArrayList<>();
 
     public boolean isWhitelist() {
-        return this.useWhitelist;
+        return useWhitelist;
     }
 
     public List<ItemType> getRestrictions() {
-        return this.restrictions;
+        return restrictions;
     }
 }

@@ -6,7 +6,6 @@ package io.github.nucleuspowered.nucleus.modules.core.commands;
 
 import com.google.common.collect.Lists;
 import com.google.common.reflect.TypeToken;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoDocumentation;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
@@ -52,16 +51,16 @@ public class DocGenCommand extends AbstractCommand<CommandSource> {
     @Override
     public boolean canLoad() {
         // Only create the command
-        return super.canLoad() && Nucleus.getNucleus().getDocGenCache().isPresent();
+        return super.canLoad() && plugin.getDocGenCache().isPresent();
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.docgen.start"));
-        DocGenCache genCache = Nucleus.getNucleus().getDocGenCache().get();
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.docgen.start"));
+        DocGenCache genCache = plugin.getDocGenCache().get();
 
         // Generate command file.
-        YAMLConfigurationLoader configurationLoader = YAMLConfigurationLoader.builder().setPath(Nucleus.getNucleus().getDataPath().resolve("commands.yml"))
+        YAMLConfigurationLoader configurationLoader = YAMLConfigurationLoader.builder().setPath(plugin.getDataPath().resolve("commands.yml"))
             .setFlowStyle(DumperOptions.FlowStyle.BLOCK).build();
         List<CommandDoc> lcd = getAndSort(genCache.getCommandDocs(), (first, second) -> {
             int m = first.getModule().compareToIgnoreCase(second.getModule());
@@ -72,15 +71,14 @@ public class DocGenCommand extends AbstractCommand<CommandSource> {
             return m;
         });
 
-        ConfigurationNode commandConfigurationNode = SimpleConfigurationNode.root().setValue(this.ttlcd, lcd);
+        ConfigurationNode commandConfigurationNode = SimpleConfigurationNode.root().setValue(ttlcd, lcd);
         configurationLoader.save(commandConfigurationNode);
 
         // Markdown
-        new MarkdownGenerator.CommandMarkdownGenerator().create(Nucleus.getNucleus().getDataPath().resolve("commands.md"), lcd);
+        new MarkdownGenerator.CommandMarkdownGenerator().create(plugin.getDataPath().resolve("commands.md"), lcd);
 
         // Generate permission file.
-        YAMLConfigurationLoader permissionsConfigurationLoader = YAMLConfigurationLoader.builder().setPath(
-                Nucleus.getNucleus().getDataPath().resolve("permissions.yml"))
+        YAMLConfigurationLoader permissionsConfigurationLoader = YAMLConfigurationLoader.builder().setPath(plugin.getDataPath().resolve("permissions.yml"))
             .setFlowStyle(DumperOptions.FlowStyle.BLOCK).build();
         List<PermissionDoc> lpd = getAndSort(Lists.newArrayList(genCache.getPermissionDocs()),  (first, second) -> {
                     int m = first.getModule().compareToIgnoreCase(second.getModule());
@@ -92,36 +90,35 @@ public class DocGenCommand extends AbstractCommand<CommandSource> {
                 });
 
         ConfigurationNode permissionConfigurationNode = SimpleConfigurationNode.root()
-                .setValue(this.ttlpd, lpd.stream().filter(PermissionDoc::isNormal).collect(Collectors.toList()));
+                .setValue(ttlpd, lpd.stream().filter(PermissionDoc::isNormal).collect(Collectors.toList()));
         permissionsConfigurationLoader.save(permissionConfigurationNode);
 
         // Markdown
-        new MarkdownGenerator.PermissionMarkdownGenerator().create(Nucleus.getNucleus().getDataPath().resolve("permissions.md"),
+        new MarkdownGenerator.PermissionMarkdownGenerator().create(plugin.getDataPath().resolve("permissions.md"),
                 lpd.stream().filter(PermissionDoc::isOre).collect(Collectors.toList()));
 
-        YAMLConfigurationLoader tokenConfigurationLoader = YAMLConfigurationLoader.builder().setPath(Nucleus.getNucleus().getDataPath().resolve("tokens.yml"))
+        YAMLConfigurationLoader tokenConfigurationLoader = YAMLConfigurationLoader.builder().setPath(plugin.getDataPath().resolve("tokens.yml"))
             .setFlowStyle(DumperOptions.FlowStyle.BLOCK).build();
         ConfigurationNode tokenConfigurationNode = SimpleConfigurationNode.root()
-            .setValue(this.ttltd, getAndSort(genCache.getTokenDocs(), Comparator.comparing(TokenDoc::getName)));
+            .setValue(ttltd, getAndSort(genCache.getTokenDocs(), Comparator.comparing(TokenDoc::getName)));
 
         tokenConfigurationLoader.save(tokenConfigurationNode);
 
-        YAMLConfigurationLoader essentialsConfigurationLoader = YAMLConfigurationLoader.builder().setPath(Nucleus.getNucleus().getDataPath().resolve("ess.yml"))
+        YAMLConfigurationLoader essentialsConfigurationLoader = YAMLConfigurationLoader.builder().setPath(plugin.getDataPath().resolve("ess.yml"))
                 .setFlowStyle(DumperOptions.FlowStyle.BLOCK).build();
         ConfigurationNode essentialsConfigurationNode = SimpleConfigurationNode.root()
-                .setValue(this.tted, getAndSort(genCache.getEssentialsDocs(), Comparator.comparing(x -> x.getEssentialsCommands().get(0))));
+                .setValue(tted, getAndSort(genCache.getEssentialsDocs(), Comparator.comparing(x -> x.getEssentialsCommands().get(0))));
 
         essentialsConfigurationLoader.save(essentialsConfigurationNode);
 
-        YAMLConfigurationLoader configurationConfigurationLoader = YAMLConfigurationLoader.builder().setPath(
-                Nucleus.getNucleus().getDataPath().resolve("conf.yml"))
+        YAMLConfigurationLoader configurationConfigurationLoader = YAMLConfigurationLoader.builder().setPath(plugin.getDataPath().resolve("conf.yml"))
                 .setFlowStyle(DumperOptions.FlowStyle.BLOCK).build();
         ConfigurationNode configurationConfigurationNode = SimpleConfigurationNode.root().setValue(genCache.getConfigDocs());
 
         configurationConfigurationLoader.save(configurationConfigurationNode);
 
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.docgen.complete"));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.docgen.complete"));
         return CommandResult.success();
     }
 

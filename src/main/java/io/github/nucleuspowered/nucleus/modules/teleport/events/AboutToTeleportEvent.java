@@ -34,7 +34,7 @@ public class AboutToTeleportEvent extends AbstractEvent implements NucleusTelepo
     }
 
     @Override public Optional<Text> getCancelMessage() {
-        return Optional.ofNullable(this.cancelMessage);
+        return Optional.ofNullable(cancelMessage);
     }
 
     @Override public void setCancelMessage(@Nullable Text message) {
@@ -42,15 +42,15 @@ public class AboutToTeleportEvent extends AbstractEvent implements NucleusTelepo
     }
 
     @Override public Transform<World> getToTransform() {
-        return this.toTransform;
+        return toTransform;
     }
 
     @Override public Player getTargetEntity() {
-        return this.teleportingEntity;
+        return teleportingEntity;
     }
 
     @Override public boolean isCancelled() {
-        return this.isCancelled;
+        return isCancelled;
     }
 
     @Override public void setCancelled(boolean cancel) {

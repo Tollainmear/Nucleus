@@ -42,11 +42,11 @@ public final class Tuples {
         @Nullable private final B second;
 
         public Optional<A> getFirst() {
-            return Optional.ofNullable(this.first);
+            return Optional.ofNullable(first);
         }
 
         public Optional<B> getSecond() {
-            return Optional.ofNullable(this.second);
+            return Optional.ofNullable(second);
         }
 
         public void mapIfPresent(Consumer<A> firstConsumer, Consumer<B> secondConsumer) {
@@ -68,15 +68,15 @@ public final class Tuples {
         }
 
         public A getFirst() {
-            return this.first;
+            return first;
         }
 
         public B getSecond() {
-            return this.second;
+            return second;
         }
 
         public C getThird() {
-            return this.third;
+            return third;
         }
     }
 
@@ -90,7 +90,7 @@ public final class Tuples {
         }
 
         public D getFourth() {
-            return this.fourth;
+            return fourth;
         }
     }
 }

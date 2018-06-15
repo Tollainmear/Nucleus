@@ -23,7 +23,7 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @Permissions(prefix = "jail")
 @RunAsync
 @NoModifiers
-@RegisterCommand(value = "set", subcommandOf = JailsCommand.class, rootAliasRegister = { "setjail", "createjail" })
+@RegisterCommand(value = "set", subcommandOf = JailsCommand.class)
 @EssentialsEquivalent({"setjail", "createjail"})
 @NonnullByDefault
 public class SetJailCommand extends AbstractCommand<Player> {
@@ -33,22 +33,22 @@ public class SetJailCommand extends AbstractCommand<Player> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {GenericArguments.onlyOne(GenericArguments.string(Text.of(this.jailName)))};
+        return new CommandElement[] {GenericArguments.onlyOne(GenericArguments.string(Text.of(jailName)))};
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
-        String name = args.<String>getOne(this.jailName).get().toLowerCase();
-        if (this.handler.getJail(name).isPresent()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jails.set.exists", name));
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
+        String name = args.<String>getOne(jailName).get().toLowerCase();
+        if (handler.getJail(name).isPresent()) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jails.set.exists", name));
             return CommandResult.empty();
         }
 
-        if (this.handler.setJail(name, src.getLocation(), src.getRotation())) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jails.set.success", name));
+        if (handler.setJail(name, src.getLocation(), src.getRotation())) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jails.set.success", name));
             return CommandResult.success();
         } else {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.jails.set.error", name));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.jails.set.error", name));
             return CommandResult.empty();
         }
     }

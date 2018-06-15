@@ -14,7 +14,7 @@ public class VanishUserDataModule extends DataModule<ModularUserService> {
     private boolean vanish = false;
 
     public boolean isVanished() {
-        return this.vanish;
+        return vanish;
     }
 
     public void setVanished(boolean vanished) {

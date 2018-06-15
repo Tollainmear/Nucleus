@@ -5,10 +5,11 @@
 package io.github.nucleuspowered.nucleus.modules.freezeplayer.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.modules.freezeplayer.datamodules.FreezePlayerUserDataModule;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -16,6 +17,7 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.User;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 @Permissions(supportsOthers = true)
@@ -23,23 +25,28 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @NonnullByDefault
 public class FreezePlayerCommand extends AbstractCommand<CommandSource> {
 
+    private final String player = "subject";
+    private final String truefalsekey = "true|false";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
                 GenericArguments.optionalWeak(GenericArguments.requiringPermission(
-                        NucleusParameters.ONE_PLAYER, this.permissions.getPermissionWithSuffix("others"))),
-                GenericArguments.optional(NucleusParameters.ONE_TRUE_FALSE)
+                        GenericArguments.onlyOne(SelectorWrapperArgument.nicknameSelector(
+                                Text.of(player),
+                                NicknameArgument.UnderlyingType.USER
+                        )), permissions.getPermissionWithSuffix("others"))),
+                GenericArguments.optional(GenericArguments.bool(Text.of(truefalsekey)))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        User pl = this.getUserFromArgs(User.class, src, NucleusParameters.Keys.PLAYER, args);
+        User pl = this.getUserFromArgs(User.class, src, player, args);
         FreezePlayerUserDataModule nu = Nucleus.getNucleus().getUserDataManager().getUnchecked(pl).get(FreezePlayerUserDataModule.class);
-        nu.setFrozen(args.<Boolean>getOne(NucleusParameters.Keys.BOOL).orElseGet(() -> !nu.isFrozen()));
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(
-            nu.isFrozen() ? "command.freezeplayer.success.frozen" : "command.freezeplayer.success.unfrozen",
-                Nucleus.getNucleus().getNameUtil().getSerialisedName(pl)));
+        nu.setFrozen(args.<Boolean>getOne(truefalsekey).orElseGet(() -> !nu.isFrozen()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat(
+            nu.isFrozen() ? "command.freezeplayer.success.frozen" : "command.freezeplayer.success.unfrozen", plugin.getNameUtil().getSerialisedName(pl)));
         return CommandResult.success();
     }
 }

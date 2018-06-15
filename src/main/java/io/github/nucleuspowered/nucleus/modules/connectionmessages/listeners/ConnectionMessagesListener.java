@@ -13,6 +13,7 @@ import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
+import io.github.nucleuspowered.nucleus.internal.permissions.ServiceChangeListener;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import io.github.nucleuspowered.nucleus.modules.connectionmessages.config.ConnectionMessagesConfig;
 import io.github.nucleuspowered.nucleus.modules.connectionmessages.config.ConnectionMessagesConfigAdapter;
@@ -28,7 +29,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 
-public class ConnectionMessagesListener implements Reloadable, ListenerBase {
+public class ConnectionMessagesListener extends ListenerBase implements Reloadable {
 
     private ConnectionMessagesConfig cmc = new ConnectionMessagesConfig();
     private final String disablePermission = PermissionRegistry.PERMISSIONS_PREFIX + "connectionmessages.disable";
@@ -36,15 +37,15 @@ public class ConnectionMessagesListener implements Reloadable, ListenerBase {
     @Override
     public Map<String, PermissionInformation> getPermissions() {
         return new HashMap<String, PermissionInformation>() {{
-            put(ConnectionMessagesListener.this.disablePermission, new PermissionInformation(
-                    Nucleus.getNucleus().getMessageProvider().getMessageWithFormat("permission.connectionmesssages.disable"),
+            put(disablePermission, new PermissionInformation(
+                plugin.getMessageProvider().getMessageWithFormat("permission.connectionmesssages.disable"),
                 SuggestedLevel.NONE));
         }};
     }
 
     @Listener
     public void onPlayerLogin(ClientConnectionEvent.Join joinEvent, @Getter("getTargetEntity") Player pl) {
-        if (joinEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
+        if (joinEvent.isMessageCancelled() || (cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
             joinEvent.setMessageCancelled(true);
             return;
         }
@@ -52,12 +53,12 @@ public class ConnectionMessagesListener implements Reloadable, ListenerBase {
         try {
             ModularUserService nucleusUser = Nucleus.getNucleus().getUserDataManager().getUnchecked(pl);
             Optional<String> lastKnown = nucleusUser.get(CoreUserDataModule.class).getLastKnownName();
-            if (this.cmc.isDisplayPriorName() &&
-                !this.cmc.getPriorNameMessage().isEmpty() &&
+            if (cmc.isDisplayPriorName() &&
+                !cmc.getPriorNameMessage().isEmpty() &&
                 !lastKnown.orElseGet(pl::getName).equalsIgnoreCase(pl.getName())) {
                     // Name change!
-                    joinEvent.getChannel().orElse(MessageChannel.TO_ALL).send(Nucleus.getNucleus(),
-                            this.cmc.getPriorNameMessage().getForCommandSource(pl,
+                    joinEvent.getChannel().orElse(MessageChannel.TO_ALL).send(plugin,
+                        cmc.getPriorNameMessage().getForCommandSource(pl,
                             ImmutableMap.of("previousname", cs -> Optional.of(Text.of(lastKnown.get()))), Maps.newHashMap()));
             }
         } catch (Exception e) {
@@ -66,40 +67,40 @@ public class ConnectionMessagesListener implements Reloadable, ListenerBase {
             }
         }
 
-        if (this.cmc.isModifyLoginMessage()) {
-            if (this.cmc.getLoginMessage().isEmpty()) {
+        if (cmc.isModifyLoginMessage()) {
+            if (cmc.getLoginMessage().isEmpty()) {
                 joinEvent.setMessageCancelled(true);
             } else {
-                joinEvent.setMessage(this.cmc.getLoginMessage().getForCommandSource(pl));
+                joinEvent.setMessage(cmc.getLoginMessage().getForCommandSource(pl));
             }
         }
     }
 
     @Listener
     public void onPlayerFirstJoin(NucleusFirstJoinEvent event, @Getter("getTargetEntity") Player pl) {
-        if (this.cmc.isShowFirstTimeMessage() && !this.cmc.getFirstTimeMessage().isEmpty()) {
-            event.getChannel().orElse(MessageChannel.TO_ALL).send(Nucleus.getNucleus(), this.cmc.getFirstTimeMessage().getForCommandSource(pl));
+        if (cmc.isShowFirstTimeMessage() && !cmc.getFirstTimeMessage().isEmpty()) {
+            event.getChannel().orElse(MessageChannel.TO_ALL).send(plugin, cmc.getFirstTimeMessage().getForCommandSource(pl));
         }
     }
 
     @Listener
     public void onPlayerQuit(ClientConnectionEvent.Disconnect leaveEvent, @Getter("getTargetEntity") Player pl) {
-        if (leaveEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
+        if (leaveEvent.isMessageCancelled() || (cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
             leaveEvent.setMessageCancelled(true);
             return;
         }
 
-        if (this.cmc.isModifyLogoutMessage()) {
-            if (this.cmc.getLogoutMessage().isEmpty()) {
+        if (cmc.isModifyLogoutMessage()) {
+            if (cmc.getLogoutMessage().isEmpty()) {
                 leaveEvent.setMessageCancelled(true);
             } else {
-                leaveEvent.setMessage(this.cmc.getLogoutMessage().getForCommandSource(pl));
+                leaveEvent.setMessage(cmc.getLogoutMessage().getForCommandSource(pl));
             }
         }
     }
 
     @Override
-    public void onReload() {
-        this.cmc = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(ConnectionMessagesConfigAdapter.class).getNodeOrDefault();
+    public void onReload() throws Exception {
+        cmc = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(ConnectionMessagesConfigAdapter.class).getNodeOrDefault();
     }
 }

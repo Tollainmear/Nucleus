@@ -4,12 +4,11 @@
  */
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.Sponge;
@@ -17,6 +16,8 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 import org.spongepowered.api.world.storage.WorldProperties;
 
@@ -26,37 +27,32 @@ import org.spongepowered.api.world.storage.WorldProperties;
 @NonnullByDefault
 public class DisableWorldCommand extends AbstractCommand<CommandSource> {
 
+    private final String worldKey = "world";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.WORLD_PROPERTIES_ENABLED_ONLY
+            GenericArguments.onlyOne(new NucleusWorldPropertiesArgument(Text.of(worldKey), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        WorldProperties worldProperties = args.<WorldProperties>getOne(NucleusParameters.Keys.WORLD).get();
+        WorldProperties worldProperties = args.<WorldProperties>getOne(worldKey).get();
         if (!worldProperties.isEnabled()) {
-            throw new ReturnMessageException(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.disable.alreadydisabled", worldProperties.getWorldName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.disable.alreadydisabled", worldProperties.getWorldName()));
         }
 
         if (Sponge.getServer().getWorld(worldProperties.getUniqueId()).isPresent()) {
-            throw new ReturnMessageException(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.disable.warnloaded", worldProperties.getWorldName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.disable.warnloaded", worldProperties.getWorldName()));
         }
 
-        disableWorld(src, worldProperties);
-        return CommandResult.success();
-    }
-
-    static void disableWorld(CommandSource src, WorldProperties worldProperties) throws ReturnMessageException {
         worldProperties.setEnabled(false);
         if (worldProperties.isEnabled()) {
-            throw new ReturnMessageException(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.disable.couldnotdisable", worldProperties.getWorldName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.disable.couldnotdisable", worldProperties.getWorldName()));
         }
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.disable.success", worldProperties.getWorldName()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.disable.success", worldProperties.getWorldName()));
+        return CommandResult.success();
     }
 }

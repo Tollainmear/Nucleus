@@ -31,7 +31,6 @@ import io.github.nucleuspowered.nucleus.modules.core.config.WarmupConfig;
 import org.junit.BeforeClass;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.spongepowered.api.asset.Asset;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.text.Text;
@@ -48,6 +47,7 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
+import java.util.function.Supplier;
 
 public abstract class TestBase {
 
@@ -109,7 +109,7 @@ public abstract class TestBase {
 
         @Override
         public Logger getLogger() {
-            return LoggerFactory.getLogger("test");
+            return null;
         }
 
         @Override public Path getConfigDirPath() {
@@ -117,6 +117,10 @@ public abstract class TestBase {
         }
 
         @Override public Path getDataPath() {
+            return null;
+        }
+
+        @Override public Supplier<Path> getDataPathSupplier() {
             return null;
         }
 
@@ -164,7 +168,7 @@ public abstract class TestBase {
 
         @Override
         public PermissionRegistry getPermissionRegistry() {
-            return this.permissionRegistry;
+            return permissionRegistry;
         }
 
         @Override
@@ -210,7 +214,7 @@ public abstract class TestBase {
 
         @Override
         public MessageProvider getMessageProvider() {
-            return this.mp;
+            return mp;
         }
 
         @Override

@@ -27,9 +27,9 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 public class RemoveFirstSpawnCommand extends AbstractCommand<CommandSource> {
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         Nucleus.getNucleus().getGeneralService().get(SpawnGeneralDataModule.class).removeFirstSpawn();
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.setfirstspawn.remove"));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.setfirstspawn.remove"));
         return CommandResult.success();
     }
 }

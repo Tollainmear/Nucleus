@@ -42,15 +42,15 @@ public class DateRotatableFileLogger implements Closeable {
     }
 
     private void openFile() throws IOException {
-        if (this.isClosed) {
+        if (isClosed) {
             throw new IllegalStateException();
         }
 
-        if (this.file != null && !this.file.isClosed()) {
+        if (file != null && !file.isClosed()) {
             try {
-                this.file.close();
+                file.close();
             } finally {
-                this.file = null;
+                file = null;
             }
         }
 
@@ -59,7 +59,7 @@ public class DateRotatableFileLogger implements Closeable {
         String fileName;
         do {
             count++;
-            fileName = this.directory.toString() + "/" + this.filenamePrefix + "-" + DateTimeFormatter.ofPattern("yyyy-MM-dd").format(Instant.now().atZone(ZoneId.systemDefault())) + "-" + count + ".log";
+            fileName = directory.toString() + "/" + filenamePrefix + "-" + DateTimeFormatter.ofPattern("yyyy-MM-dd").format(Instant.now().atZone(ZoneId.systemDefault())) + "-" + count + ".log";
             Path nextFile = Paths.get(fileName);
             if (Files.exists(nextFile)) {
                 try {
@@ -68,16 +68,16 @@ public class DateRotatableFileLogger implements Closeable {
                     e.printStackTrace();
                 }
             } else if (!Files.exists(Paths.get(fileName + ".gz"))) {
-                this.file = new LogFile(nextFile, this.formatter);
+                file = new LogFile(nextFile, formatter);
                 go = true;
             }
         } while(!go);
 
-        this.currentDate = Instant.now().truncatedTo(ChronoUnit.DAYS);
+        currentDate = Instant.now().truncatedTo(ChronoUnit.DAYS);
     }
 
     public void logEntry(String entry) throws IOException {
-        if (this.isClosed) {
+        if (isClosed) {
             throw new IllegalStateException();
         }
 
@@ -85,7 +85,7 @@ public class DateRotatableFileLogger implements Closeable {
     }
 
     public void logEntry(Iterable<String> entry) throws IOException {
-        if (this.isClosed) {
+        if (isClosed) {
             throw new IllegalStateException();
         }
 
@@ -93,18 +93,18 @@ public class DateRotatableFileLogger implements Closeable {
     }
 
     private void logEntry(Iterable<String> entry, boolean retryOnError) throws IOException {
-        if (this.file == null || this.file.isClosed() || Instant.now().truncatedTo(ChronoUnit.DAYS).isAfter(this.currentDate)) {
+        if (file == null || file.isClosed() || Instant.now().truncatedTo(ChronoUnit.DAYS).isAfter(currentDate)) {
             openFile();
         }
 
         try {
             Iterator<String> iterator = entry.iterator();
             while (iterator.hasNext()) {
-                this.file.writeLine(iterator.next());
+                file.writeLine(iterator.next());
                 iterator.remove();
             }
 
-            this.file.flush();
+            file.flush();
         } catch (IOException e) {
             if (retryOnError) {
                 logEntry(entry, false);
@@ -116,13 +116,13 @@ public class DateRotatableFileLogger implements Closeable {
 
     @Override
     public void close() throws IOException {
-        if (this.isClosed) {
+        if (isClosed) {
             return;
         }
 
-        if (this.file != null && !this.file.isClosed()) {
-            this.file.close();
-            this.file = null;
+        if (file != null && !file.isClosed()) {
+            file.close();
+            file = null;
             this.isClosed = true;
         }
     }

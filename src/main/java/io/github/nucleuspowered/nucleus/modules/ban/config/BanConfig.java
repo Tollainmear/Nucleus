@@ -14,6 +14,6 @@ public class BanConfig {
     private long maxTempBanLength = 604800;
 
     public long getMaximumTempBanLength() {
-        return this.maxTempBanLength;
+        return maxTempBanLength;
     }
 }

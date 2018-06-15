@@ -5,7 +5,6 @@
 package io.github.nucleuspowered.nucleus.modules.message.config;
 
 import io.github.nucleuspowered.neutrino.annotations.Default;
-import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateFactory;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateImpl;
 import ninja.leaping.configurate.objectmapping.Setting;
 import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
@@ -13,102 +12,77 @@ import ninja.leaping.configurate.objectmapping.serialize.ConfigSerializable;
 @ConfigSerializable
 public class MessageConfig {
 
-    private static final String MESSAGE_SENDER_DEFAULT = "&7[me -> {{toDisplay}}&7]: &r";
-    private static final String MESSAGE_RECEIVER_DEFAULT = "&7[{{fromDisplay}}&7 -> me]: &r";
-    private static final String MESSAGE_SOCIAL_SPY_DEFAULT = "&7[SocialSpy] [{{fromDisplay}}&7 -> {{toDisplay}}&7]: &r";
-    private static final String HELP_OP_DEFAULT = "&7HelpOp: {{name}} &7> &r";
-
     @Setting(value = "helpop-prefix", comment = "config.message.helpop.prefix")
-    @Default(value = HELP_OP_DEFAULT, saveDefaultIfNull = true)
+    @Default(value = "&7HelpOp: {{name}} &7> &r", saveDefaultIfNull = true)
     private NucleusTextTemplateImpl helpOpPrefix;
 
     @Setting(value = "msg-receiver-prefix", comment = "config.message.receiver.prefix")
-    @Default(value = MESSAGE_RECEIVER_DEFAULT, saveDefaultIfNull = true)
+    @Default(value = "&7[{{fromDisplay}}&7 -> me]: &r", saveDefaultIfNull = true)
     private NucleusTextTemplateImpl messageReceiverPrefix;
 
     @Setting(value = "msg-sender-prefix", comment = "config.message.sender.prefix")
-    @Default(value = MESSAGE_SENDER_DEFAULT, saveDefaultIfNull = true)
+    @Default(value = "&7[me -> {{toDisplay}}&7]: &r", saveDefaultIfNull = true)
     private NucleusTextTemplateImpl messageSenderPrefix;
 
     @Setting(value = "socialspy")
     private SocialSpy socialSpy = new SocialSpy();
 
     public NucleusTextTemplateImpl getHelpOpPrefix() {
-        if (this.helpOpPrefix == null) {
-            // set default
-            this.helpOpPrefix = NucleusTextTemplateFactory.createFromAmpersandString(HELP_OP_DEFAULT);
-        }
-
-        return this.helpOpPrefix;
+        return helpOpPrefix;
     }
 
     public NucleusTextTemplateImpl getMessageReceiverPrefix() {
-        if (this.messageReceiverPrefix == null) {
-            // set default
-            this.messageReceiverPrefix = NucleusTextTemplateFactory.createFromAmpersandString(MESSAGE_RECEIVER_DEFAULT);
-        }
-
-        return this.messageReceiverPrefix;
+        return messageReceiverPrefix;
     }
 
     public NucleusTextTemplateImpl getMessageSenderPrefix() {
-        if (this.messageSenderPrefix == null) {
-            // set default
-            this.messageSenderPrefix = NucleusTextTemplateFactory.createFromAmpersandString(MESSAGE_SENDER_DEFAULT);
-        }
-
-        return this.messageSenderPrefix;
+        return messageSenderPrefix;
     }
 
     public NucleusTextTemplateImpl getMessageSocialSpyPrefix() {
-        if (this.socialSpy.messageSocialSpyPrefix == null) {
-            // set default
-            this.socialSpy.messageSocialSpyPrefix = NucleusTextTemplateFactory.createFromAmpersandString(MESSAGE_SOCIAL_SPY_DEFAULT);
-        }
-
-        return this.socialSpy.messageSocialSpyPrefix;
+        return socialSpy.messageSocialSpyPrefix;
     }
 
     public boolean isSocialSpyAllowForced() {
-        return this.socialSpy.allowForced;
+        return socialSpy.allowForced;
     }
 
     public boolean isSocialSpyLevels() {
-        return this.socialSpy.socialSpyLevels;
+        return socialSpy.socialSpyLevels;
     }
 
     public boolean isSocialSpySameLevel() {
-        return this.socialSpy.socialSpySameLevel;
+        return socialSpy.socialSpySameLevel;
     }
 
     public int getCustomTargetLevel() {
-        return this.socialSpy.level.customTargets;
+        return socialSpy.level.customTargets;
     }
 
     public int getServerLevel() {
-        return this.socialSpy.level.server;
+        return socialSpy.level.server;
     }
 
     public boolean isShowMessagesInSocialSpyWhileMuted() {
-        return this.socialSpy.showMessagesInSocialSpyWhileMuted;
+        return socialSpy.showMessagesInSocialSpyWhileMuted;
     }
 
     public String getMutedTag() {
-        return this.socialSpy.mutedTag;
+        return socialSpy.mutedTag;
     }
 
     public String getBlockedTag() {
-        return this.socialSpy.blocked;
+        return socialSpy.blocked;
     }
 
     public Targets spyOn() {
-        return this.socialSpy.targets;
+        return socialSpy.targets;
     }
 
     @ConfigSerializable
     public static class SocialSpy {
         @Setting(value = "msg-prefix", comment = "config.message.socialspy.prefix")
-        @Default(value = MESSAGE_SOCIAL_SPY_DEFAULT, saveDefaultIfNull = true)
+        @Default(value = "&7[SocialSpy] [{{fromDisplay}}&7 -> {{toDisplay}}&7]: &r", saveDefaultIfNull = true)
         private NucleusTextTemplateImpl messageSocialSpyPrefix;
 
         @Setting(value = "allow-forced", comment = "config.message.socialspy.force")
@@ -159,15 +133,15 @@ public class MessageConfig {
         private boolean custom = true;
 
         public boolean isPlayer() {
-            return this.player;
+            return player;
         }
 
         public boolean isServer() {
-            return this.server;
+            return server;
         }
 
         public boolean isCustom() {
-            return this.custom;
+            return custom;
         }
     }
 }

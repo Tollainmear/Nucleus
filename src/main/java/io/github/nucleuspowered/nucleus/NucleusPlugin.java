@@ -51,9 +51,6 @@ import io.github.nucleuspowered.nucleus.internal.qsml.NucleusConfigAdapter;
 import io.github.nucleuspowered.nucleus.internal.qsml.NucleusLoggerProxy;
 import io.github.nucleuspowered.nucleus.internal.qsml.QuickStartModuleConstructor;
 import io.github.nucleuspowered.nucleus.internal.qsml.event.BaseModuleEvent;
-import io.github.nucleuspowered.nucleus.internal.services.CommandRemapperService;
-import io.github.nucleuspowered.nucleus.internal.services.HotbarFirstReorderService;
-import io.github.nucleuspowered.nucleus.internal.services.InventoryReorderService;
 import io.github.nucleuspowered.nucleus.internal.services.WarmupManager;
 import io.github.nucleuspowered.nucleus.internal.teleport.NucleusTeleportHandler;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTokenServiceImpl;
@@ -64,8 +61,6 @@ import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfig;
 import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.core.config.WarmupConfig;
 import io.github.nucleuspowered.nucleus.modules.core.datamodules.UniqueUserCountTransientModule;
-import io.github.nucleuspowered.nucleus.modules.core.service.UUIDChangeService;
-import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.slf4j.Logger;
@@ -79,6 +74,7 @@ import org.spongepowered.api.config.ConfigDir;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
+import org.spongepowered.api.event.game.state.GamePostInitializationEvent;
 import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStartingServerEvent;
@@ -99,7 +95,6 @@ import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleDiscoveryException;
 import uk.co.drnaylor.quickstart.exceptions.QuickStartModuleLoaderException;
 import uk.co.drnaylor.quickstart.modulecontainers.DiscoveryModuleContainer;
-import uk.co.drnaylor.quickstart.modulecontainers.discoverystrategies.Strategy;
 
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -115,7 +110,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Supplier;
 
-import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
@@ -151,7 +145,7 @@ public class NucleusPlugin extends Nucleus {
     private MessageProvider commandMessageProvider = new ResourceMessageProvider(ResourceMessageProvider.commandMessagesBundle);
 
     private WarmupManager warmupManager;
-    private final EconHelper econHelper = new EconHelper();
+    private final EconHelper econHelper = new EconHelper(this);
     private final PermissionRegistry permissionRegistry = new PermissionRegistry();
 
     private DiscoveryModuleContainer moduleContainer;
@@ -161,8 +155,6 @@ public class NucleusPlugin extends Nucleus {
     private final Logger logger;
     private final Path configDir;
     private final Supplier<Path> dataDir;
-    @Nullable private Path dataFileLocation = null;
-    private Path currentDataDir;
     private boolean isServer = false;
     private WarmupConfig warmupConfig;
     private final String versionFail;
@@ -195,11 +187,11 @@ public class NucleusPlugin extends Nucleus {
         this.configDir = configDir.resolve(PluginInfo.ID);
         Supplier<Path> sp;
         try {
-            Path path = Sponge.getGame().getSavesDirectory();
+            Path path = Sponge.getGame().getSavesDirectory().resolve("nucleus");
             sp = () -> path;
             this.isServer = true;
         } catch (NullPointerException e) {
-            sp = () -> Sponge.getGame().getSavesDirectory();
+            sp = () -> Sponge.getGame().getSavesDirectory().resolve("nucleus");
         }
 
         this.dataDir = sp;
@@ -216,42 +208,25 @@ public class NucleusPlugin extends Nucleus {
             s = new ClientMessageReciever();
         }
 
-        // From the config, get the `core.language` entry, if it exists.
-        HoconConfigurationLoader.Builder builder = HoconConfigurationLoader.builder().setPath(Paths.get(this.configDir.toString(), "main.conf"));
-        try {
-            CommentedConfigurationNode node = builder.build().load();
-            String language = node.getNode("core", "language").getString("default");
-            if (!language.equalsIgnoreCase("default")) {
-                this.messageProvider.setLocale(language);
-            }
-
-            String location = node.getNode("core", "data-file-location").getString("default");
-            if (!location.equalsIgnoreCase("default")) {
-                this.dataFileLocation = Paths.get(location);
-            }
-        } catch (IOException e) {
-            // don't worry about it
-        }
-
         if (this.versionFail != null) {
-            s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.nostart.compat", PluginInfo.NAME,
+            s.sendMessage(messageProvider.getTextMessageWithFormat("startup.nostart.compat", PluginInfo.NAME,
                     Sponge.getPlatform().getContainer(Platform.Component.IMPLEMENTATION).getName(),
                     Sponge.getPlatform().getContainer(Platform.Component.IMPLEMENTATION).getVersion().orElse("unknown")));
-            s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.nostart.compat2", this.versionFail));
-            s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.nostart.compat3", this.versionFail));
+            s.sendMessage(messageProvider.getTextMessageWithFormat("startup.nostart.compat2", this.versionFail));
+            s.sendMessage(messageProvider.getTextMessageWithFormat("startup.nostart.compat3", this.versionFail));
             disable();
             return;
         }
 
         s.sendMessage(Text.of(TextColors.WHITE, "--------------------------"));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome", PluginInfo.NAME,
+        s.sendMessage(messageProvider.getTextMessageWithFormat("startup.welcome", PluginInfo.NAME,
                 PluginInfo.VERSION, Sponge.getPlatform().getContainer(Platform.Component.API).getVersion().orElse("unknown")));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome2"));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome3"));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome4"));
+        s.sendMessage(messageProvider.getTextMessageWithFormat("startup.welcome2"));
+        s.sendMessage(messageProvider.getTextMessageWithFormat("startup.welcome3"));
+        s.sendMessage(messageProvider.getTextMessageWithFormat("startup.welcome4"));
         s.sendMessage(Text.of(TextColors.WHITE, "--------------------------"));
 
-        this.logger.info(this.messageProvider.getMessageWithFormat("startup.preinit", PluginInfo.NAME));
+        logger.info(messageProvider.getMessageWithFormat("startup.preinit", PluginInfo.NAME));
         Game game = Sponge.getGame();
         NucleusAPITokens.onPreInit(this);
 
@@ -264,7 +239,7 @@ public class NucleusPlugin extends Nucleus {
             if (this.isServer) {
                 Files.createDirectories(this.dataDir.get());
             }
-            this.commandsConfig = new CommandsConfig(Paths.get(this.configDir.toString(), "commands.conf"));
+            this.commandsConfig = new CommandsConfig(Paths.get(configDir.toString(), "commands.conf"));
 
             DataProviders d = new DataProviders(this);
             this.generalService = new ModularGeneralService(d.getGeneralDataProvider());
@@ -293,16 +268,16 @@ public class NucleusPlugin extends Nucleus {
 
         // We register the ModuleService NOW so that others can hook into it.
         game.getServiceManager().setProvider(this, NucleusModuleService.class, new ModuleRegistrationProxyService(this));
-        game.getServiceManager().setProvider(this, NucleusWarmupManagerService.class, this.warmupManager);
-        this.serviceManager.registerService(WarmupManager.class, this.warmupManager);
+        game.getServiceManager().setProvider(this, NucleusWarmupManagerService.class, warmupManager);
+        serviceManager.registerService(WarmupManager.class, warmupManager);
 
-        this.nucleusChatService = new NucleusTokenServiceImpl(this);
-        this.serviceManager.registerService(NucleusTokenServiceImpl.class, this.nucleusChatService);
-        Sponge.getServiceManager().setProvider(this, NucleusMessageTokenService.class, this.nucleusChatService);
-        this.serviceManager.registerService(CommandRemapperService.class, new CommandRemapperService());
+        nucleusChatService = new NucleusTokenServiceImpl(this);
+        serviceManager.registerService(NucleusTokenServiceImpl.class, nucleusChatService);
+        Sponge.getServiceManager().setProvider(this, NucleusMessageTokenService.class, nucleusChatService);
 
         try {
             final String he = this.messageProvider.getMessageWithFormat("config.main-header", PluginInfo.VERSION);
+            HoconConfigurationLoader.Builder builder = HoconConfigurationLoader.builder();
             Optional<Asset> optionalAsset = Sponge.getAssetManager().getAsset(Nucleus.getNucleus(), "classes.json");
             DiscoveryModuleContainer.Builder db = DiscoveryModuleContainer.builder();
             if (optionalAsset.isPresent()) {
@@ -316,22 +291,27 @@ public class NucleusPlugin extends Nucleus {
                     sc.add(Class.forName(classString));
                 }
 
-                db.setStrategy((string, classloader) -> sc)
+                db.setDiscoveryStrategy((string, classloader) -> sc)
                         .setConstructor(new QuickStartModuleConstructor(m));
             } else {
-                db.setConstructor(new QuickStartModuleConstructor(null))
-                        .setStrategy(Strategy.DEFAULT);
+                db.setConstructor(new QuickStartModuleConstructor(null));
             }
             this.moduleContainer = db
-                    .setConfigurationLoader(builder.setDefaultOptions(ConfigurateHelper.setOptions(builder.getDefaultOptions()).setHeader(he)).build())
+                    .setConfigurationLoader(
+                        builder.setDefaultOptions(
+                                ConfigurateHelper.setOptions(builder.getDefaultOptions()).setHeader(he))
+                            .setPath(Paths.get(configDir.toString(), "main.conf"))
+                            .build())
                     .setPackageToScan(getClass().getPackage().getName() + ".modules")
-                    .setLoggerProxy(new NucleusLoggerProxy(this.logger))
+                    .setLoggerProxy(new NucleusLoggerProxy(logger))
                     .setConfigurationOptionsTransformer(x -> ConfigurateHelper.setOptions(x).setHeader(he))
                     .setOnPreEnable(() -> {
                         initDocGenIfApplicable();
                         Sponge.getEventManager().post(new BaseModuleEvent.AboutToEnable(this));
                     })
-                    .setOnEnable(() -> Sponge.getEventManager().post(new BaseModuleEvent.PreEnable(this)))
+                    .setOnEnable(() -> {
+                        Sponge.getEventManager().post(new BaseModuleEvent.PreEnable(this));
+                    })
                     .setOnPostEnable(() -> Sponge.getEventManager().post(new BaseModuleEvent.Enabled(this)))
                     .setRequireModuleDataAnnotation(true)
                     .setNoMergeIfPresent(true)
@@ -362,9 +342,9 @@ public class NucleusPlugin extends Nucleus {
                             m.getAnnotation(ModuleData.class).id().toLowerCase() + ".desc"))
                     .build();
 
-            this.moduleContainer.startDiscover();
+            moduleContainer.startDiscover();
         } catch (Exception e) {
-            this.isErrored = e;
+            isErrored = e;
             disable();
             e.printStackTrace();
         }
@@ -372,55 +352,47 @@ public class NucleusPlugin extends Nucleus {
 
     @Listener(order = Order.FIRST)
     public void onInit(GameInitializationEvent event) {
-        if (this.isErrored != null) {
+        if (isErrored != null) {
             return;
         }
 
-        this.logger.info(this.messageProvider.getMessageWithFormat("startup.init", PluginInfo.NAME));
+        logger.info(messageProvider.getMessageWithFormat("startup.init", PluginInfo.NAME));
 
         try {
             CatalogTypeFinalStaticProcessor.setEventContexts();
         } catch (Exception e) {
-            this.isErrored = e;
+            isErrored = e;
             disable();
             e.printStackTrace();
         }
     }
 
-    @Listener(order = Order.POST)
-    public void onInitLate(GameInitializationEvent event) {
-        if (this.isErrored != null) {
+    @Listener(order = Order.FIRST)
+    public void onPostInit(GamePostInitializationEvent event) {
+        if (isErrored != null) {
             return;
         }
 
-        this.logger.info(this.messageProvider.getMessageWithFormat("startup.postinit", PluginInfo.NAME));
+        logger.info(messageProvider.getMessageWithFormat("startup.postinit", PluginInfo.NAME));
 
         // Load up the general data files now, mods should have registered items by now.
         try {
             // Reloadable so that we can update the serialisers.
-            this.moduleContainer.reloadSystemConfig();
+            moduleContainer.reloadSystemConfig();
         } catch (Exception e) {
-            this.isErrored = e;
+            isErrored = e;
             disable();
             e.printStackTrace();
             return;
         }
 
-        // Register the inventory service
-        // TODO: Remove for API 7.1
-        try {
-            Class.forName("org.spongepowered.api.item.inventory.InventoryTransformations");
-            this.serviceManager.registerService(InventoryReorderService.class, new HotbarFirstReorderService());
-        } catch (Throwable e) {
-            this.serviceManager.registerService(InventoryReorderService.class, InventoryReorderService.DEFAULT);
-        }
 
         try {
             Sponge.getEventManager().post(new BaseModuleEvent.AboutToConstructEvent(this));
-            this.logger.info(this.messageProvider.getMessageWithFormat("startup.moduleloading", PluginInfo.NAME));
-            this.moduleContainer.loadModules(true);
+            logger.info(messageProvider.getMessageWithFormat("startup.moduleloading", PluginInfo.NAME));
+            moduleContainer.loadModules(true);
 
-            CoreConfig coreConfig = this.moduleContainer.getConfigAdapterForModule(CoreModule.ID, CoreConfigAdapter.class).getNodeOrDefault();
+            CoreConfig coreConfig = moduleContainer.getConfigAdapterForModule(CoreModule.ID, CoreConfigAdapter.class).getNodeOrDefault();
 
             if (coreConfig.isErrorOnStartup()) {
                 throw new IllegalStateException("In main.conf, core.simulate-error-on-startup is set to TRUE. Remove this config entry to allow Nucleus to start. Simulating error and disabling Nucleus.");
@@ -430,42 +402,40 @@ public class NucleusPlugin extends Nucleus {
             this.isTraceUserCreations = coreConfig.traceUserCreations();
             this.savesandloads = coreConfig.isPrintSaveLoad();
         } catch (Throwable construction) {
-            this.logger.info(this.messageProvider.getMessageWithFormat("startup.modulenotloaded", PluginInfo.NAME));
+            logger.info(messageProvider.getMessageWithFormat("startup.modulenotloaded", PluginInfo.NAME));
             construction.printStackTrace();
             disable();
-            this.isErrored = construction;
+            isErrored = construction;
             return;
         }
 
         // Register a reloadable.
         CommandPermissionHandler.onReload();
         registerReloadable(CommandPermissionHandler::onReload);
-        getDocGenCache().ifPresent(x -> x.addTokenDocs(this.nucleusChatService.getNucleusTokenParser().getTokenNames()));
+        getDocGenCache().ifPresent(x -> x.addTokenDocs(nucleusChatService.getNucleusTokenParser().getTokenNames()));
 
-        logMessageDefault();
-        this.logger.info(this.messageProvider.getMessageWithFormat("startup.moduleloaded", PluginInfo.NAME));
+        logger.info(messageProvider.getMessageWithFormat("startup.moduleloaded", PluginInfo.NAME));
         registerPermissions();
         Sponge.getEventManager().post(new BaseModuleEvent.Complete(this));
 
-        this.logger.info(this.messageProvider.getMessageWithFormat("startup.completeinit", PluginInfo.NAME));
+        logger.info(messageProvider.getMessageWithFormat("startup.completeinit", PluginInfo.NAME));
     }
 
     @Listener(order = Order.EARLY)
     public void onGameStartingEarly(GameStartingServerEvent event) {
         if (!this.isServer) {
             try {
-                this.logger.info(this.messageProvider.getMessageWithFormat("startup.loaddata", PluginInfo.NAME));
+                Files.createDirectories(this.dataDir.get());
                 allChange();
             } catch (IOException e) {
-                this.isErrored = e;
+                isErrored = e;
                 disable();
                 e.printStackTrace();
             }
         }
     }
 
-    private void allChange() throws IOException {
-        resetDataPath(true);
+    private void allChange() {
         this.generalService.changeFile();
         this.kitService.changeFile();
         this.nameBanService.changeFile();
@@ -477,8 +447,8 @@ public class NucleusPlugin extends Nucleus {
 
     @Listener
     public void onGameStarting(GameStartingServerEvent event) {
-        if (this.isErrored == null) {
-            this.logger.info(this.messageProvider.getMessageWithFormat("startup.gamestart", PluginInfo.NAME));
+        if (isErrored == null) {
+            logger.info(messageProvider.getMessageWithFormat("startup.gamestart", PluginInfo.NAME));
             try {
                 if (this.getConfigValue(CoreModule.ID, CoreConfigAdapter.class, CoreConfig::isTrackWorldUUIDs).orElse(true)) {
                     WorldCorrector.worldCheck();
@@ -491,41 +461,32 @@ public class NucleusPlugin extends Nucleus {
 
             // Load up the general data files now, mods should have registered items by now.
             try {
+                this.generalService.loadInternal();
                 this.kitService.loadInternal();
             } catch (Exception e) {
-                this.isErrored = e;
+                isErrored = e;
                 disable();
                 e.printStackTrace();
                 return;
             }
 
+            generalService.getTransient(UniqueUserCountTransientModule.class).resetUniqueUserCount();
+
             // Start the user cache walk if required, the user storage service is loaded at this point.
-            Task.builder().async().execute(() -> this.userCacheService.startFilewalkIfNeeded()).submit(this);
-            this.logger.info(this.messageProvider.getMessageWithFormat("startup.started", PluginInfo.NAME));
+            Task.builder().async().execute(() -> userCacheService.startFilewalkIfNeeded()).submit(this);
+            logger.info(messageProvider.getMessageWithFormat("startup.started", PluginInfo.NAME));
         }
     }
 
     @Listener
     public void onGameStarted(GameStartedServerEvent event) {
-        if (!this.isServer) { // on client, disable whitelist
+        if (isErrored == null) {
             try {
-                Sponge.getServer().setHasWhitelist(false);
-            } catch (Throwable e) {
-                // ignored
-            }
-        }
-
-        if (this.isErrored == null) {
-            this.generalService.getTransient(UniqueUserCountTransientModule.class).resetUniqueUserCount();
-            try {
-                getInternalServiceManager().getServiceUnchecked(UUIDChangeService.class).setStateAndReload();
-                getInternalServiceManager().getServiceUnchecked(CommandRemapperService.class).activate();
-                this.generalService.loadInternal(); // for migration purposes
                 // Save any additions.
-                this.moduleContainer.refreshSystemConfig();
+                moduleContainer.refreshSystemConfig();
                 fireReloadables();
             } catch (Throwable e) {
-                this.isErrored = e;
+                isErrored = e;
                 disable();
                 errorOnStartup();
                 return;
@@ -534,46 +495,44 @@ public class NucleusPlugin extends Nucleus {
             this.hasStarted = true;
             Sponge.getScheduler().createSyncExecutor(this).submit(() -> this.gameStartedTime = Instant.now());
 
-            if (this.getInternalServiceManager().getService(CoreConfigAdapter.class).get().getNodeOrDefault().isWarningOnStartup()) {
-                // What about perms and econ?
-                List<Text> lt = Lists.newArrayList();
-                if (ServiceChangeListener.isOpOnly()) {
-                    addTri(lt);
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.line"));
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.nopermplugin"));
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.nopermplugin2"));
+            // What about perms and econ?
+            List<Text> lt = Lists.newArrayList();
+            if (ServiceChangeListener.isOpOnly()) {
+                addTri(lt, 0);
+                lt.add(messageProvider.getTextMessageWithFormat("standard.line"));
+                lt.add(messageProvider.getTextMessageWithFormat("standard.nopermplugin"));
+                lt.add(messageProvider.getTextMessageWithFormat("standard.nopermplugin2"));
+            }
+
+            if (!Sponge.getServiceManager().isRegistered(EconomyService.class)) {
+                if (lt.isEmpty()) {
+                    addTri(lt, 0);
                 }
 
-                if (!Sponge.getServiceManager().isRegistered(EconomyService.class)) {
-                    if (lt.isEmpty()) {
-                        addTri(lt);
-                    }
+                lt.add(messageProvider.getTextMessageWithFormat("standard.line"));
+                lt.add(messageProvider.getTextMessageWithFormat("standard.noeconplugin"));
+                lt.add(messageProvider.getTextMessageWithFormat("standard.noeconplugin2"));
+            }
 
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.line"));
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.noeconplugin"));
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.noeconplugin2"));
+            if (!lt.isEmpty()) {
+                lt.add(messageProvider.getTextMessageWithFormat("standard.line"));
+                lt.add(messageProvider.getTextMessageWithFormat("standard.seesuggested"));
+            }
+
+            if (!this.startupMessages.isEmpty()) {
+                if (lt.isEmpty()) {
+                    addTri(lt, 0);
                 }
 
-                if (!lt.isEmpty()) {
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.line"));
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.seesuggested"));
-                }
+                lt.add(messageProvider.getTextMessageWithFormat("standard.line"));
+                lt.addAll(this.startupMessages);
+                this.startupMessages.clear();
+            }
 
-                if (!this.startupMessages.isEmpty()) {
-                    if (lt.isEmpty()) {
-                        addTri(lt);
-                    }
-
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.line"));
-                    lt.addAll(this.startupMessages);
-                    this.startupMessages.clear();
-                }
-
-                if (!lt.isEmpty()) {
-                    lt.add(this.messageProvider.getTextMessageWithFormat("standard.line"));
-                    ConsoleSource c = Sponge.getServer().getConsole();
-                    lt.forEach(c::sendMessage);
-                }
+            if (!lt.isEmpty()) {
+                lt.add(messageProvider.getTextMessageWithFormat("standard.line"));
+                ConsoleSource c = Sponge.getServer().getConsole();
+                lt.forEach(c::sendMessage);
             }
         }
     }
@@ -582,22 +541,21 @@ public class NucleusPlugin extends Nucleus {
     public void onServerStop(GameStoppedServerEvent event) {
         if (this.hasStarted && this.isErrored == null) {
             this.gameStartedTime = null;
-            this.logger.info(this.messageProvider.getMessageWithFormat("startup.stopped", PluginInfo.NAME));
+            logger.info(messageProvider.getMessageWithFormat("startup.stopped", PluginInfo.NAME));
             saveData();
-            getInternalServiceManager().getServiceUnchecked(CommandRemapperService.class).deactivate();
         }
     }
 
     @Override
     public void saveData() {
-        this.userDataManager.saveAll();
-        this.worldDataManager.saveAll();
+        userDataManager.saveAll();
+        worldDataManager.saveAll();
 
         if (Sponge.getGame().getState().ordinal() > GameState.SERVER_ABOUT_TO_START.ordinal()) {
             try {
-                this.generalService.save();
-                this.nameBanService.save();
-                this.userCacheService.save();
+                generalService.save();
+                nameBanService.save();
+                userCacheService.save();
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -606,83 +564,41 @@ public class NucleusPlugin extends Nucleus {
 
     @Override
     public Logger getLogger() {
-        return this.logger;
+        return logger;
     }
 
     @Override
     public Path getConfigDirPath() {
-        return this.configDir;
-    }
-
-    private Path resetDataPath(boolean tryCreate) throws IOException {
-        Path path;
-        boolean custom = false;
-        if (this.dataFileLocation == null) {
-            path = this.dataDir.get();
-        } else {
-            custom = true;
-            if (this.dataFileLocation.isAbsolute()) {
-                path = this.dataFileLocation;
-            } else {
-                path = this.dataDir.get().resolve(this.dataFileLocation);
-            }
-
-            if (!Files.isDirectory(path)) {
-                // warning
-                this.logger.error(getMessageProvider().getMessageWithFormat("nucleus.custompath.error",
-                        path.toAbsolutePath().toString(),
-                        this.dataDir.get().toAbsolutePath().toString()));
-                custom = false;
-                path = this.dataDir.get();
-            }
-        }
-
-        this.currentDataDir = path.resolve("nucleus");
-        if (tryCreate) {
-            if (custom) {
-                this.logger.info(getMessageProvider().getMessageWithFormat("nucleus.custompath.info",
-                        this.currentDataDir.toAbsolutePath().toString()));
-            }
-            Files.createDirectories(this.currentDataDir);
-        }
-        return this.currentDataDir;
+        return configDir;
     }
 
     @Override
-    @Nonnull
     public Path getDataPath() {
-        if (this.currentDataDir == null) {
-            try {
-                return resetDataPath(true);
-            } catch (IOException e) {
-                e.printStackTrace();
-                this.logger.error(getMessageProvider().getMessageWithFormat("nucleus.couldntcreate"));
-                try {
-                    return resetDataPath(false);
-                } catch (IOException ignored) { }
-            }
-        }
+        return this.dataDir.get();
+    }
 
-        return this.currentDataDir;
+    @Override
+    public Supplier<Path> getDataPathSupplier() {
+        return this.dataDir;
     }
 
     @Override
     public UserDataManager getUserDataManager() {
-        return this.userDataManager;
+        return userDataManager;
     }
 
     @Override
     public WorldDataManager getWorldDataManager() {
-        return this.worldDataManager;
+        return worldDataManager;
     }
 
     @Override public UserCacheService getUserCacheService() {
-        return this.userCacheService;
+        return userCacheService;
     }
 
     @Override
     public void saveSystemConfig() throws IOException {
-        this.moduleContainer.saveSystemConfig();
+        moduleContainer.saveSystemConfig();
     }
 
     @Override
@@ -699,7 +615,7 @@ public class NucleusPlugin extends Nucleus {
             this.isTraceUserCreations = coreConfig.traceUserCreations();
             this.savesandloads = coreConfig.isPrintSaveLoad();
 
-            for (TextFileController tfc : this.textFileControllers.values()) {
+            for (TextFileController tfc : textFileControllers.values()) {
                 tfc.load();
             }
 
@@ -717,24 +633,12 @@ public class NucleusPlugin extends Nucleus {
         }
     }
 
-    @Override
-    public boolean reloadMessages() {
+    @Override public boolean reloadMessages() {
         boolean r = true;
-        CoreConfig config = getInternalServiceManager().getServiceUnchecked(CoreConfigAdapter.class).getNodeOrDefault();
-        // Get the language
-        String language = config.getServerLocale();
-        if (language == null) {
-            language = "default";
-        }
-
-        if (config.isCustommessages()) {
+        if (getConfigValue("core", CoreConfigAdapter.class, CoreConfig::isCustommessages).orElse(false)) {
             try {
-                this.messageProvider =
-                        new ConfigMessageProvider(this.configDir.resolve("messages.conf"), ResourceMessageProvider.messagesBundle, language);
-                this.commandMessageProvider =
-                        new ConfigMessageProvider(this.configDir.resolve("command-help-messages.conf"),
-                                ResourceMessageProvider.commandMessagesBundle, language);
-                Sponge.getServer().getConsole().sendMessage(this.messageProvider.getTextMessageWithFormat("language.set", "messages.conf"));
+                this.messageProvider = new ConfigMessageProvider(configDir.resolve("messages.conf"), ResourceMessageProvider.messagesBundle);
+                this.commandMessageProvider = new ConfigMessageProvider(configDir.resolve("command-help-messages.conf"), ResourceMessageProvider.commandMessagesBundle);
                 return true;
             } catch (Throwable exception) {
                 r = false;
@@ -763,21 +667,14 @@ public class NucleusPlugin extends Nucleus {
             }
         }
 
-        this.messageProvider = new ResourceMessageProvider(ResourceMessageProvider.messagesBundle, language);
-        this.commandMessageProvider = new ResourceMessageProvider(ResourceMessageProvider.commandMessagesBundle, language);
-        if (this.hasStarted) {
-            logMessageDefault();
-        }
+        this.messageProvider = new ResourceMessageProvider(ResourceMessageProvider.messagesBundle);
+        this.commandMessageProvider = new ResourceMessageProvider(ResourceMessageProvider.commandMessagesBundle);
         return r;
-    }
-
-    private void logMessageDefault() {
-        this.logger.info(this.messageProvider.getMessageWithFormat("language.set", this.messageProvider.getLocale().toLanguageTag()));
     }
 
     @Override
     public WarmupManager getWarmupManager() {
-        return this.warmupManager;
+        return warmupManager;
     }
 
     @Override public WarmupConfig getWarmupConfig() {
@@ -790,17 +687,17 @@ public class NucleusPlugin extends Nucleus {
 
     @Override
     public EconHelper getEconHelper() {
-        return this.econHelper;
+        return econHelper;
     }
 
     @Override
     public PermissionRegistry getPermissionRegistry() {
-        return this.permissionRegistry;
+        return permissionRegistry;
     }
 
     @Override
     public DiscoveryModuleContainer getModuleContainer() {
-        return this.moduleContainer;
+        return moduleContainer;
     }
 
     @Override public boolean isModuleLoaded(String moduleId) {
@@ -822,7 +719,7 @@ public class NucleusPlugin extends Nucleus {
 
     @Override
     public InternalServiceManager getInternalServiceManager() {
-        return this.serviceManager;
+        return serviceManager;
     }
 
     @Override public Optional<Instant> getGameStartedTime() {
@@ -831,51 +728,51 @@ public class NucleusPlugin extends Nucleus {
 
     @Override
     public ModularGeneralService getGeneralService() {
-        return this.generalService;
+        return generalService;
     }
 
     @Override
     public ItemDataService getItemDataService() {
-        return this.itemDataService;
+        return itemDataService;
     }
 
     @Override public KitService getKitService() {
-        return this.kitService;
+        return kitService;
     }
 
-    @Override public NameBanService getNameBanService() { return this.nameBanService; }
+    @Override public NameBanService getNameBanService() { return nameBanService; }
 
     @Override
     public CommandsConfig getCommandsConfig() {
-        return this.commandsConfig;
+        return commandsConfig;
     }
 
     @Override
     public NameUtil getNameUtil() {
-        return this.nameUtil;
+        return nameUtil;
     }
 
     public TextParsingUtils getTextParsingUtils() {
-        return this.textParsingUtils;
+        return textParsingUtils;
     }
 
     @Override
     public MessageProvider getMessageProvider() {
-        return this.messageProvider;
+        return messageProvider;
     }
 
     @Override
     public MessageProvider getCommandMessageProvider() {
-        return this.commandMessageProvider;
+        return commandMessageProvider;
     }
 
     @Override
     public NucleusTeleportHandler getTeleportHandler() {
-        return this.teleportHandler;
+        return teleportHandler;
     }
 
     @Override public NucleusMessageTokenService getMessageTokenService() {
-        return this.nucleusChatService;
+        return nucleusChatService;
     }
 
     @Override public boolean isDebugMode() {
@@ -899,25 +796,25 @@ public class NucleusPlugin extends Nucleus {
      * @return An {@link Optional} that might contain a {@link TextFileController}.
      */
     @Override public Optional<TextFileController> getTextFileController(String getController) {
-        return Optional.ofNullable(this.textFileControllers.get(getController));
+        return Optional.ofNullable(textFileControllers.get(getController));
     }
 
     @Override public void addTextFileController(String id, Asset asset, Path file) throws IOException {
-        if (!this.textFileControllers.containsKey(id)) {
-            this.textFileControllers.put(id, new TextFileController(asset, file));
+        if (!textFileControllers.containsKey(id)) {
+            textFileControllers.put(id, new TextFileController(asset, file));
         }
     }
 
     @Override public void registerReloadable(Reloadable reloadable) {
-        this.reloadableList.add(reloadable);
+        reloadableList.add(reloadable);
     }
 
     @Override public Optional<DocGenCache> getDocGenCache() {
-        return Optional.ofNullable(this.docGenCache);
+        return Optional.ofNullable(docGenCache);
     }
 
     @Override public PluginContainer getPluginContainer() {
-        return this.pluginContainer;
+        return pluginContainer;
     }
 
     @Override public boolean isSessionDebug() {
@@ -929,11 +826,11 @@ public class NucleusPlugin extends Nucleus {
     }
 
     private void initDocGenIfApplicable() {
-        if (this.moduleContainer.getCurrentPhase() == ConstructionPhase.ENABLING) {
+        if (moduleContainer.getCurrentPhase() == ConstructionPhase.ENABLING) {
             // If enable-doc-gen is enabled, we init the DocGen system here.
             try {
-                if (this.moduleContainer.getConfigAdapterForModule("core", CoreConfigAdapter.class).getNodeOrDefault().isEnableDocGen()) {
-                    this.docGenCache = new DocGenCache(this.logger);
+                if (moduleContainer.getConfigAdapterForModule("core", CoreConfigAdapter.class).getNodeOrDefault().isEnableDocGen()) {
+                    docGenCache = new DocGenCache(logger);
                 }
             } catch (NoModuleException | IncorrectAdapterTypeException e) {
                 e.printStackTrace();
@@ -945,10 +842,7 @@ public class NucleusPlugin extends Nucleus {
         Optional<PermissionService> ops = Sponge.getServiceManager().provide(PermissionService.class);
         ops.ifPresent(permissionService -> {
             Map<String, PermissionInformation> m = this.getPermissionRegistry().getPermissions();
-            m.entrySet().stream().filter(x -> {
-                SuggestedLevel lvl = x.getValue().level;
-                return lvl == SuggestedLevel.ADMIN || lvl == SuggestedLevel.OWNER;
-            })
+            m.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.ADMIN)
                     .filter(x -> x.getValue().isNormal)
                     .forEach(k -> permissionService.newDescriptionBuilder(this).assign(PermissionDescription.ROLE_ADMIN, true)
                             .description(k.getValue().description).id(k.getKey()).register());
@@ -981,17 +875,14 @@ public class NucleusPlugin extends Nucleus {
         Sponge.getEventManager().unregisterPluginListeners(this);
         Sponge.getCommandManager().getOwnedBy(this).forEach(Sponge.getCommandManager()::removeMapping);
         Sponge.getScheduler().getScheduledTasks(this).forEach(Task::cancel);
-        getInternalServiceManager().getServiceUnchecked(CommandRemapperService.class).deactivate();
 
         // Re-register this to warn people about the error.
         Sponge.getEventManager().registerListener(this, GameStartedServerEvent.class, e -> errorOnStartup());
     }
 
     private void errorOnStartup() {
-        try {
-            Sponge.getServer().setHasWhitelist(!this.isServer);
-        } catch (Throwable e) {
-            //ignored
+        if (this.isServer) {
+            Sponge.getServer().setHasWhitelist(true);
         }
 
         if (this.versionFail != null) {
@@ -1028,16 +919,18 @@ public class NucleusPlugin extends Nucleus {
         return messages;
     }
 
-    private void addTri(List<Text> messages) {
-        messages.add(Text.of(TextColors.YELLOW, "        /\\"));
-        messages.add(Text.of(TextColors.YELLOW, "       /  \\"));
-        messages.add(Text.of(TextColors.YELLOW, "      / || \\"));
-        messages.add(Text.of(TextColors.YELLOW, "     /  ||  \\"));
-        messages.add(Text.of(TextColors.YELLOW, "    /   ||   \\"));
-        messages.add(Text.of(TextColors.YELLOW, "   /    ||    \\"));
-        messages.add(Text.of(TextColors.YELLOW, "  /            \\"));
-        messages.add(Text.of(TextColors.YELLOW, " /      **      \\"));
-        messages.add(Text.of(TextColors.YELLOW, "------------------"));
+    private void addTri(List<Text> messages, int spacing) {
+        Text space = Text.of(String.join("", Collections.nCopies(spacing, " ")));
+
+        messages.add(Text.of(space, TextColors.YELLOW, "        /\\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "       /  \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "      / || \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "     /  ||  \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "    /   ||   \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "   /    ||    \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "  /            \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, " /      **      \\"));
+        messages.add(Text.of(space, TextColors.YELLOW, "------------------"));
     }
 
     @Override
@@ -1078,10 +971,10 @@ public class NucleusPlugin extends Nucleus {
         messages.add(Text.of(TextColors.RED, "The error that Nucleus encountered will be reproduced below for your convenience."));
 
         messages.add(Text.of(TextColors.YELLOW, "----------------------------"));
-        if (this.isErrored == null) {
+        if (isErrored == null) {
             messages.add(Text.of(TextColors.YELLOW, "No exception was saved."));
         } else {
-            Throwable exception = this.isErrored;
+            Throwable exception = isErrored;
             if (exception.getCause() != null &&
                     (exception instanceof QuickStartModuleLoaderException || exception instanceof QuickStartModuleDiscoveryException)) {
                 exception = exception.getCause();

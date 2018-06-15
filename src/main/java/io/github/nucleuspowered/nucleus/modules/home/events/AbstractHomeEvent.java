@@ -31,7 +31,7 @@ public abstract class AbstractHomeEvent extends AbstractCancelMessageEvent imple
     }
 
     @Override public String getName() {
-        return this.name;
+        return name;
     }
 
     @Override public User getUser() {
@@ -43,7 +43,7 @@ public abstract class AbstractHomeEvent extends AbstractCancelMessageEvent imple
     }
 
     @Override public boolean isCancelled() {
-        return this.isCancelled;
+        return isCancelled;
     }
 
     @Override public void setCancelled(boolean cancel) {

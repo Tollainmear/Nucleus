@@ -20,7 +20,7 @@ import org.spongepowered.api.event.filter.cause.Root;
 import org.spongepowered.api.event.filter.type.Exclude;
 import org.spongepowered.api.item.ItemType;
 
-public class PowertoolListener implements ListenerBase {
+public class PowertoolListener extends ListenerBase {
 
     private final CommandPermissionHandler permissionRegistry =
             Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(PowertoolCommand.class);
@@ -29,7 +29,7 @@ public class PowertoolListener implements ListenerBase {
     @Exclude(InteractBlockEvent.class)
     public void onUserInteract(final InteractEvent event, @Root Player player) {
         // No item in hand or no permission -> no powertool.
-        if (!this.permissionRegistry.testBase(player) || !player.getItemInHand(HandTypes.MAIN_HAND).isPresent()) {
+        if (!permissionRegistry.testBase(player) || !player.getItemInHand(HandTypes.MAIN_HAND).isPresent()) {
             return;
         }
 
@@ -59,7 +59,7 @@ public class PowertoolListener implements ListenerBase {
 
                 // Run each command.
                 if (interacting == null && x.stream().allMatch(i -> i.contains("{{subject}}"))) {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("powertool.playeronly"));
+                    player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("powertool.playeronly"));
                     return;
                 }
 

@@ -21,25 +21,25 @@ public class NoteUserDataModule extends DataModule<ModularUserService> {
     private List<NoteData> notes = Lists.newArrayList();
 
     public List<NoteData> getNotes() {
-        return ImmutableList.copyOf(this.notes);
+        return ImmutableList.copyOf(notes);
     }
 
     public void addNote(NoteData note) {
-        if (this.notes == null) {
-            this.notes = Lists.newArrayList();
+        if (notes == null) {
+            notes = Lists.newArrayList();
         }
 
-        this.notes.add(note);
+        notes.add(note);
     }
 
     public boolean removeNote(Note note) {
-        return this.notes.removeIf(x -> x.getNoterInternal().equals(note.getNoter().orElse(Util.consoleFakeUUID))
+        return notes.removeIf(x -> x.getNoterInternal().equals(note.getNoter().orElse(Util.consoleFakeUUID))
                 && x.getNote().equals(note.getNote()));
     }
 
     public boolean clearNotes() {
-        if (!this.notes.isEmpty()) {
-            this.notes.clear();
+        if (!notes.isEmpty()) {
+            notes.clear();
             return true;
         } else {
             return false;

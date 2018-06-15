@@ -8,6 +8,7 @@ import io.github.nucleuspowered.nucleus.api.service.NucleusMailService;
 import io.github.nucleuspowered.nucleus.internal.annotations.RegisterService;
 import io.github.nucleuspowered.nucleus.internal.qsml.module.StandardModule;
 import io.github.nucleuspowered.nucleus.modules.mail.handlers.MailHandler;
+import org.spongepowered.api.Sponge;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 
 @RegisterService(value = MailHandler.class, apiService = NucleusMailService.class)

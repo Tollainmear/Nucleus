@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
@@ -44,8 +43,7 @@ public class SetGameruleCommand extends AbstractCommand<CommandSource> {
 
         worldProperties.setGameRule(gameRule, value);
 
-        src.sendMessage(
-                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.gamerule.set.success", gameRule, value, worldProperties.getWorldName()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.world.gamerule.set.success", gameRule, value, worldProperties.getWorldName()));
         return CommandResult.success();
     }
 }

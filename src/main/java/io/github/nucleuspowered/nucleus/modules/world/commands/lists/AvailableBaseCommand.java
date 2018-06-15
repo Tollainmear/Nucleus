@@ -31,7 +31,7 @@ public abstract class AvailableBaseCommand extends AbstractCommand<CommandSource
     }
 
     @Override
-    protected CommandResult executeCommand(CommandSource src, CommandContext args) {
+    protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
 
         List<Text> types = Sponge.getRegistry().getAllOf(this.catalogType).stream()

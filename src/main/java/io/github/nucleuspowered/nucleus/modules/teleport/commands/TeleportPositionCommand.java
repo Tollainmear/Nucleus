@@ -4,15 +4,16 @@
  */
 package io.github.nucleuspowered.nucleus.modules.teleport.commands;
 
-import com.flowpowered.math.vector.Vector3d;
 import com.flowpowered.math.vector.Vector3i;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
+import io.github.nucleuspowered.nucleus.argumentparsers.BoundedIntegerArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
@@ -44,12 +45,11 @@ import java.util.Map;
 @EssentialsEquivalent("tppos")
 public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
 
+    private final String key = "subject";
     private final String location = "world";
     private final String x = "x";
     private final String y = "y";
     private final String z = "z";
-//    private final String p = "pitch";
-//    private final String yaw = "yaw";
 
     @Override
     public CommandElement[] getArguments() {
@@ -58,16 +58,18 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
                     .setUnknownShortFlagBehavior(CommandFlags.UnknownFlagBehavior.IGNORE)
                     .flag("f", "-force")
                     .flag("c", "-chunk")
-//                    .valueFlag(GenericArguments.doubleNum(Text.of(this.p)), "p", "-pitch")
-//                    .valueFlag(GenericArguments.doubleNum(Text.of(this.yaw)), "y", "-yaw")
                     .permissionFlag(this.permissions.getPermissionWithSuffix("exempt.bordercheck"),"b", "-border")
                     .buildWith(
                         GenericArguments.seq(
                             // Actual arguments
                             GenericArguments.optionalWeak(
-                                    GenericArguments.requiringPermission(NucleusParameters.ONE_PLAYER, this.permissions.getOthers())),
-                            GenericArguments.onlyOne(GenericArguments.optionalWeak(GenericArguments.world(Text.of(this.location)))),
-                            NucleusParameters.POSITION
+                                    GenericArguments.requiringPermission(
+                                            GenericArguments.onlyOne(
+                                                    SelectorWrapperArgument.nicknameSelector(Text.of(key), NicknameArgument.UnderlyingType.PLAYER)), permissions.getOthers())),
+                            GenericArguments.onlyOne(GenericArguments.optionalWeak(GenericArguments.world(Text.of(location)))),
+                            GenericArguments.onlyOne(new BoundedIntegerArgument(Text.of(x), Integer.MIN_VALUE, Integer.MAX_VALUE)),
+                            GenericArguments.onlyOne(new BoundedIntegerArgument(Text.of(y), 0, 255)),
+                            GenericArguments.onlyOne(new BoundedIntegerArgument(Text.of(z), Integer.MIN_VALUE, Integer.MAX_VALUE))
                         )
                 )
         };
@@ -82,16 +84,15 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Player pl = this.getUserFromArgs(Player.class, src, NucleusParameters.Keys.PLAYER, args);
-        WorldProperties wp = args.<WorldProperties>getOne(this.location).orElse(pl.getWorld().getProperties());
+        Player pl = this.getUserFromArgs(Player.class, src, key, args);
+        WorldProperties wp = args.<WorldProperties>getOne(location).orElse(pl.getWorld().getProperties());
         World world = Sponge.getServer().loadWorld(wp.getUniqueId()).get();
-        Vector3d location = args.<Vector3d>getOne(NucleusParameters.Keys.XYZ).get();
 
-        double xx = location.getX();
-        double  zz = location.getZ();
-        double  yy = location.getY();
+        int xx = args.<Integer>getOne(x).get();
+        int zz = args.<Integer>getOne(z).get();
+        int yy = args.<Integer>getOne(y).get();
         if (yy < 0) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.ysmall"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.ysmall"));
             return CommandResult.empty();
         }
 
@@ -100,7 +101,7 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
             xx = xx * 16 + 8;
             yy = yy * 16 + 8;
             zz = zz * 16 + 8;
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.fromchunk",
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.fromchunk",
                     String.valueOf(xx), String.valueOf(yy), String.valueOf(zz)));
         }
 
@@ -122,9 +123,9 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
         // Don't bother with the safety if the flag is set.
         if (args.<Boolean>getOne("f").orElse(false)) {
             if (teleportHandler.teleportPlayer(pl, loc, NucleusTeleportHandler.StandardTeleportMode.NO_CHECK, cause).isSuccess()) {
-                pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.success.self"));
+                pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.success.self"));
                 if (!src.equals(pl)) {
-                    src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.success.other", pl.getName()));
+                    src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.success.other", pl.getName()));
                 }
 
                 return CommandResult.success();
@@ -141,16 +142,9 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
 
         NucleusTeleportHandler.TeleportResult result = teleportHandler.teleportPlayer(pl, loc, mode, cause, true);
         if (result.isSuccess()) {
-/*            Vector3d rotation = pl.getHeadRotation();
-            pl.setHeadRotation(
-                    new Vector3d(
-                            args.<Double>getOne(this.p).orElse(rotation.getX()),
-                            args.<Double>getOne(this.yaw).orElse(rotation.getY()),
-                            0d)
-            );*/
-            pl.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.success.self"));
+            pl.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.success.self"));
             if (!src.equals(pl)) {
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tppos.success.other", pl.getName()));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.tppos.success.other", pl.getName()));
             }
 
             return CommandResult.success();
@@ -161,7 +155,7 @@ public class TeleportPositionCommand extends AbstractCommand<CommandSource> {
         throw ReturnMessageException.fromKey("command.tppos.cancelledevent");
     }
 
-    private boolean isBetween(double toCheck, double max, double min) {
+    private boolean isBetween(int toCheck, int max, int min) {
         return toCheck >= min && toCheck <= max;
     }
 }

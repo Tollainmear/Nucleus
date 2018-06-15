@@ -33,7 +33,7 @@ public class InternalNucleusMailEvent extends AbstractEvent implements io.github
 
     @Override
     public boolean isCancelled() {
-        return this.cancelled;
+        return cancelled;
     }
 
     @Override
@@ -48,16 +48,16 @@ public class InternalNucleusMailEvent extends AbstractEvent implements io.github
 
     @Override
     public Optional<User> getSender() {
-        return Optional.ofNullable(this.from);
+        return Optional.ofNullable(from);
     }
 
     @Override
     public User getRecipient() {
-        return this.to;
+        return to;
     }
 
     @Override
     public String getMessage() {
-        return this.message;
+        return message;
     }
 }

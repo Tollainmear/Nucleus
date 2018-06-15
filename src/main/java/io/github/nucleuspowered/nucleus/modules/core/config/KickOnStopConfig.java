@@ -19,10 +19,10 @@ public class KickOnStopConfig {
     private NucleusTextTemplateImpl kickOnStopMessage;
 
     public boolean isKickOnStop() {
-        return this.kickOnStop;
+        return kickOnStop;
     }
 
     public NucleusTextTemplateImpl getKickOnStopMessage() {
-        return this.kickOnStopMessage;
+        return kickOnStopMessage;
     }
 }

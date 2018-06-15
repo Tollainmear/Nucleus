@@ -25,11 +25,11 @@ public class PowertoolUserDataModule extends DataModule<ModularUserService> {
     private Map<String, List<String>> powertools = Maps.newHashMap();
 
     public Map<String, List<String>> getPowertools() {
-        return ImmutableMap.copyOf(this.powertools);
+        return ImmutableMap.copyOf(powertools);
     }
 
     public Optional<List<String>> getPowertoolForItem(ItemType item) {
-        List<String> tools = this.powertools.get(item.getId());
+        List<String> tools = powertools.get(item.getId());
         if (tools != null) {
             return Optional.of(ImmutableList.copyOf(tools));
         }
@@ -38,19 +38,19 @@ public class PowertoolUserDataModule extends DataModule<ModularUserService> {
     }
 
     public void setPowertool(ItemType type, List<String> commands) {
-        this.powertools.put(type.getId(), commands);
+        powertools.put(type.getId(), commands);
     }
 
     public void clearPowertool(ItemType type) {
-        this.powertools.remove(type.getId());
+        powertools.remove(type.getId());
     }
 
     public void clearPowertool(String type) {
-        this.powertools.remove(type);
+        powertools.remove(type);
     }
 
     public boolean isPowertoolToggled() {
-        return this.powertoolToggle;
+        return powertoolToggle;
     }
 
     public void setPowertoolToggle(boolean set) {

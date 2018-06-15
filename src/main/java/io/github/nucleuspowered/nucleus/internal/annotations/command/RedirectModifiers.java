@@ -4,7 +4,11 @@
  */
 package io.github.nucleuspowered.nucleus.internal.annotations.command;
 
-import java.lang.annotation.*;
+import java.lang.annotation.Documented;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
 /**
  * Signifies that the name of the command gets cooldowns etc. from another section
@@ -20,10 +24,4 @@ public @interface RedirectModifiers {
      */
     String value();
 
-    /**
-     * Whether to attempt to generate entries in the config file.
-     *
-     * @return true if so
-     */
-    boolean requireGeneration() default false;
 }

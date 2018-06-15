@@ -4,13 +4,11 @@
  */
 package io.github.nucleuspowered.nucleus.modules.warp.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
-import io.github.nucleuspowered.nucleus.modules.warp.WarpParameters;
 import io.github.nucleuspowered.nucleus.modules.warp.event.CreateWarpEvent;
 import io.github.nucleuspowered.nucleus.modules.warp.handlers.WarpHandler;
 import io.github.nucleuspowered.nucleus.util.CauseStackHelper;
@@ -28,6 +26,8 @@ import java.util.regex.Pattern;
 /**
  * Creates a warp where the player is currently standing. The warp must not
  * exist.
+ *
+ * Command Usage: /warp set [warp] Permission: nucleus.warp.set.base
  */
 @Permissions(prefix = "warp")
 @RegisterCommand(value = {"set"}, subcommandOf = WarpCommand.class, rootAliasRegister = { "setwarp", "warpset" })
@@ -40,43 +40,46 @@ public class SetWarpCommand extends AbstractCommand<Player> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {
-                GenericArguments.onlyOne(GenericArguments.string(Text.of(WarpParameters.WARP_KEY)))
-        };
+        return new CommandElement[] {GenericArguments.onlyOne(GenericArguments.string(Text.of(WarpCommand.warpNameArg)))};
+    }
+
+    @Override
+    public String[] getAliases() {
+        return new String[] {"set"};
     }
 
     @Override
     public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
-        String warp = args.<String>getOne(WarpParameters.WARP_KEY).get();
+        String warp = args.<String>getOne(WarpCommand.warpNameArg).get();
 
         // Needs to match the name...
-        if (!this.warpRegex.matcher(warp).matches()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.warps.invalidname"));
+        if (!warpRegex.matcher(warp).matches()) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.warps.invalidname"));
             return CommandResult.empty();
         }
 
         // Get the service, does the warp exist?
-        if (this.qs.getWarp(warp).isPresent()) {
+        if (qs.getWarp(warp).isPresent()) {
             // You have to delete to set the same name
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.warps.nooverwrite"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.warps.nooverwrite"));
             return CommandResult.empty();
         }
 
         CreateWarpEvent event = CauseStackHelper.createFrameWithCausesWithReturn(c -> new CreateWarpEvent(c, warp, src.getLocation()), src);
         if (Sponge.getEventManager().post(event)) {
             throw new ReturnMessageException(event.getCancelMessage().orElseGet(() ->
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("nucleus.eventcancelled")
+                plugin.getMessageProvider().getTextMessageWithFormat("nucleus.eventcancelled")
             ));
         }
 
         // OK! Set it.
-        if (this.qs.setWarp(warp, src.getLocation(), src.getRotation())) {
+        if (qs.setWarp(warp, src.getLocation(), src.getRotation())) {
             // Worked. Tell them.
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.warps.set", warp));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.warps.set", warp));
             return CommandResult.success();
         }
 
         // Didn't work. Tell them.
-        throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.warps.seterror"));
+        throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.warps.seterror"));
     }
 }

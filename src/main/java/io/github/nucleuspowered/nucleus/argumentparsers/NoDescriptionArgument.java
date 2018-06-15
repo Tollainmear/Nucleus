@@ -27,7 +27,7 @@ public class NoDescriptionArgument extends WrappedElement {
         super(element);
     }
 
-    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) {
+    @Nullable @Override protected Object parseValue(CommandSource source, CommandArgs args) throws ArgumentParseException {
         return null;
     }
 

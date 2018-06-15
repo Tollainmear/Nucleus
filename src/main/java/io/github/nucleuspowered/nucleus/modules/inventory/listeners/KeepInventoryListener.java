@@ -9,7 +9,6 @@ import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.annotations.RequireExistenceOf;
 import io.github.nucleuspowered.nucleus.internal.annotations.SkipOnError;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
-import io.github.nucleuspowered.nucleus.internal.permissions.ServiceChangeListener;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.entity.living.Living;
 import org.spongepowered.api.entity.living.player.Player;
@@ -21,7 +20,7 @@ import java.util.Map;
 
 @SkipOnError
 @RequireExistenceOf(value = "org.spongepowered.api.event.entity.DestructEntityEvent$Death#setKeepInventory", showError = false)
-public class KeepInventoryListener implements ListenerBase.Conditional {
+public class KeepInventoryListener extends ListenerBase {
 
     @Override
     public Map<String, PermissionInformation> getPermissions() {
@@ -36,10 +35,4 @@ public class KeepInventoryListener implements ListenerBase.Conditional {
             event.setKeepInventory(true);
         }
     }
-
-    @Override
-    public boolean shouldEnable() {
-        return !ServiceChangeListener.isOpOnly();
-    }
-
 }

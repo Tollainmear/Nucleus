@@ -17,10 +17,10 @@ public class InfoFileConfig {
     private String defaultInfoSection = "info";
 
     public boolean isUseDefaultFile() {
-        return this.useDefaultFile;
+        return useDefaultFile;
     }
 
     public String getDefaultInfoSection() {
-        return this.defaultInfoSection;
+        return defaultInfoSection;
     }
 }

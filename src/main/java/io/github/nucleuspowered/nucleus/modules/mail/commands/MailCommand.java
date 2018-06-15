@@ -33,12 +33,11 @@ public class MailCommand extends AbstractCommand<Player> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] { GenericArguments.optional(GenericArguments.allOf(new MailFilterArgument(Text.of(MailReadBase.filters),
-                this.handler))) };
+        return new CommandElement[] { GenericArguments.optional(GenericArguments.allOf(new MailFilterArgument(Text.of(MailReadBase.filters), handler))) };
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         return MailReadBase.INSTANCE.executeCommand(src, src, args.getAll(MailReadBase.filters));
     }
 }

@@ -31,7 +31,7 @@ import org.spongepowered.api.world.World;
 
 import java.util.Optional;
 
-public class FlyListener implements Reloadable, ListenerBase {
+public class FlyListener extends ListenerBase implements Reloadable {
 
     private FlyConfig flyConfig = new FlyConfig();
     private CommandPermissionHandler flyCommandHandler =
@@ -130,7 +130,7 @@ public class FlyListener implements Reloadable, ListenerBase {
                     target.offer(Keys.CAN_FLY, false);
                     target.offer(Keys.IS_FLYING, false);
                 }
-            }).submit(Nucleus.getNucleus());
+            }).submit(plugin);
         }
     }
 
@@ -140,11 +140,11 @@ public class FlyListener implements Reloadable, ListenerBase {
     }
 
     private CommandPermissionHandler getFlyCommandHandler() {
-        if (this.flyCommandHandler == null) {
-            this.flyCommandHandler = Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(FlyCommand.class);
+        if (flyCommandHandler == null) {
+            flyCommandHandler = plugin.getPermissionRegistry().getPermissionsForNucleusCommand(FlyCommand.class);
         }
 
-        return this.flyCommandHandler;
+        return flyCommandHandler;
     }
 
     @Override public void onReload() throws Exception {
@@ -154,9 +154,7 @@ public class FlyListener implements Reloadable, ListenerBase {
     private void safeTeleport(Player pl) {
         if (!pl.isOnGround() && this.flyConfig.isFindSafeOnLogin()) {
             // Try to bring the subject down.
-            Nucleus.getNucleus().getTeleportHandler().teleportPlayer(pl,
-                    pl.getTransform(),
-                    NucleusTeleportHandler.StandardTeleportMode.SAFE_TELEPORT_DESCEND);
+            plugin.getTeleportHandler().teleportPlayer(pl, pl.getTransform(), NucleusTeleportHandler.StandardTeleportMode.SAFE_TELEPORT_DESCEND);
         }
     }
 }

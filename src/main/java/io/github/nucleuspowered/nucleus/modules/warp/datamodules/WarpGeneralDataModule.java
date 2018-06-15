@@ -43,25 +43,25 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
     private Map<String, WarpCategoryDataNode> warpCategories = Maps.newHashMap();
 
     public Optional<Warp> getWarpLocation(String name) {
-        return get(this.warps, this.getWarpLocation, name);
+        return get(warps, getWarpLocation, name);
     }
 
     public Map<String, Warp> getWarps() {
-        return convert(this.warps, this.getWarpLocation);
+        return convert(warps, getWarpLocation);
     }
 
     public boolean addWarp(String name, Location<World> loc, Vector3d rot) {
-        if (Util.getKeyIgnoreCase(this.warps, name).isPresent()) {
+        if (Util.getKeyIgnoreCase(warps, name).isPresent()) {
             return false;
         }
 
-        this.warps.put(name, new WarpNode(loc, rot));
+        warps.put(name, new WarpNode(loc, rot));
         return true;
     }
 
     public boolean setWarpCost(String name, double cost) {
         Preconditions.checkArgument(cost >= -1);
-        Optional<WarpNode> os = Util.getValueIgnoreCase(this.warps, name);
+        Optional<WarpNode> os = Util.getValueIgnoreCase(warps, name);
         if (os.isPresent()) {
             // No need to put it back - it's saved automatically.
             os.get().setCost(cost);
@@ -72,12 +72,12 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
     }
 
     public boolean setWarpsWarpCategory(String name, String category) {
-        Optional<WarpNode> os = Util.getValueIgnoreCase(this.warps, name);
+        Optional<WarpNode> os = Util.getValueIgnoreCase(warps, name);
         if (os.isPresent()) {
             // No need to put it back - it's saved automatically.
             os.get().setCategory(category);
             if (category != null) {
-                this.warpCategories.putIfAbsent(category.toLowerCase(), new WarpCategoryDataNode());
+                warpCategories.putIfAbsent(category.toLowerCase(), new WarpCategoryDataNode());
             }
 
             return true;
@@ -87,7 +87,7 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
     }
 
     public boolean setWarpDescription(String name, @Nullable Text description) {
-        Optional<WarpNode> os = Util.getValueIgnoreCase(this.warps, name);
+        Optional<WarpNode> os = Util.getValueIgnoreCase(warps, name);
         if (os.isPresent()) {
             // No need to put it back - it's saved automatically.
             os.get().setDescription(description);
@@ -98,9 +98,9 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
     }
 
     public boolean removeWarp(String name) {
-        Optional<String> os = Util.getKeyIgnoreCase(this.warps, name);
+        Optional<String> os = Util.getKeyIgnoreCase(warps, name);
         if (os.isPresent()) {
-            this.warps.remove(os.get());
+            warps.remove(os.get());
             return true;
         }
 
@@ -118,11 +118,11 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
 
     public Optional<WarpCategory> getWarpCategory(String category) {
         Preconditions.checkArgument(category != null && !category.isEmpty());
-        if (this.warps.values().stream().noneMatch(x -> x.getCategory().orElse("").equalsIgnoreCase(category))) {
+        if (warps.values().stream().noneMatch(x -> x.getCategory().orElse("").equalsIgnoreCase(category))) {
             return Optional.empty();
         }
 
-        WarpCategoryDataNode w = this.warpCategories.get(category);
+        WarpCategoryDataNode w = warpCategories.get(category);
         if (w == null) {
             w = new WarpCategoryDataNode();
             updateOrSetWarpCategory(category.toLowerCase(), null, null);
@@ -137,7 +137,7 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
     }
 
     public void updateOrSetWarpCategory(String category, @Nullable Text displayName, @Nullable Text description) {
-        this.warpCategories.put(category,
+        warpCategories.put(category,
             new WarpCategoryDataNode(
                 TextSerializers.JSON.serialize(displayName != null ? displayName : Text.of(category)),
                 description != null ? TextSerializers.JSON.serialize(description) : null
@@ -159,19 +159,19 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
         }
 
         public Optional<Double> getCost() {
-            if (this.cost > -1) {
-                return Optional.of(this.cost);
+            if (cost > -1) {
+                return Optional.of(cost);
             }
 
             return Optional.empty();
         }
 
         @Override public Optional<Text> getDescription() {
-            return Optional.ofNullable(this.description);
+            return Optional.ofNullable(description);
         }
 
         public Optional<String> getCategory() {
-            return Optional.ofNullable(this.category);
+            return Optional.ofNullable(category);
         }
 
         @Override
@@ -207,7 +207,7 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
         }
 
         @Override public Collection<Warp> getWarps() {
-            return this.getWarps.get();
+            return getWarps.get();
         }
 
         @Override public boolean equals(Object o) {
@@ -220,11 +220,11 @@ public class WarpGeneralDataModule extends LocationDataModule<ModularGeneralServ
 
             WarpCategoryData that = (WarpCategoryData) o;
 
-            return this.name.equals(that.name);
+            return name.equals(that.name);
         }
 
         @Override public int hashCode() {
-            return this.name.hashCode();
+            return name.hashCode();
         }
     }
 }

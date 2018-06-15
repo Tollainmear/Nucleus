@@ -6,11 +6,10 @@ package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
 import com.flowpowered.math.vector.Vector3d;
 import com.google.common.collect.Sets;
-import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandResult;
@@ -66,8 +65,8 @@ public class KillEntityCommand extends AbstractCommand<CommandSource> {
                 GenericArguments.flags()
                         .setAnchorFlags(true)
                         .valueFlag(GenericArguments.integer(Text.of(radius)), "r")
-                        .valueFlag(NucleusParameters.WORLD_PROPERTIES_LOADED_ONLY, "w")
-                        .buildWith(GenericArguments.allOf(GenericArguments.choices(Text.of(type), this.map)))
+                        .valueFlag(new NucleusWorldPropertiesArgument(Text.of(world), NucleusWorldPropertiesArgument.Type.LOADED_ONLY), "w")
+                        .buildWith(GenericArguments.allOf(GenericArguments.choices(Text.of(type), map)))
         };
     }
 
@@ -107,7 +106,7 @@ public class KillEntityCommand extends AbstractCommand<CommandSource> {
             x.remove();
         });
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.killentity.success", String.valueOf(killCount)));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.killentity.success", String.valueOf(killCount)));
         return CommandResult.affectedEntities(killCount);
     }
 }

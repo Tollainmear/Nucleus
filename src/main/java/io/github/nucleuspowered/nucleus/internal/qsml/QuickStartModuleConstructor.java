@@ -22,7 +22,7 @@ public class QuickStartModuleConstructor implements ModuleConstructor {
 
     @Override
     public Module constructModule(Class<? extends Module> moduleClass) throws QuickStartModuleLoaderException.Construction {
-        Module m;
+        Module m = null;
         try {
             m = moduleClass.newInstance();
         } catch (InstantiationException | IllegalAccessException e) {

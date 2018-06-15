@@ -17,6 +17,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 public abstract class ModularDataService<S extends ModularDataService<S>> extends AbstractService<ConfigurationNode> {
 
@@ -28,18 +30,18 @@ public abstract class ModularDataService<S extends ModularDataService<S>> extend
 
     private final Object lockingObject = new Object();
 
-    ModularDataService(DataProvider<ConfigurationNode> dataProvider) {
+    ModularDataService(DataProvider<ConfigurationNode> dataProvider) throws Exception {
         super(dataProvider);
     }
 
     @SuppressWarnings("unchecked")
     public final <T extends TransientModule<S>> T getTransient(Class<T> module) {
-        if (this.transientCache.containsKey(module)) {
-            return (T) this.transientCache.get(module);
+        if (transientCache.containsKey(module)) {
+            return (T)transientCache.get(module);
         }
 
         try {
-            this.loadTransientTimings.startTimingIfSync();
+            loadTransientTimings.startTimingIfSync();
 
             T dm;
             Optional<T> m = tryGetTransient(module);
@@ -57,7 +59,7 @@ public abstract class ModularDataService<S extends ModularDataService<S>> extend
             e.printStackTrace();
             throw new RuntimeException(e);
         } finally {
-            this.loadTransientTimings.stopTimingIfSync();
+            loadTransientTimings.stopTimingIfSync();
         }
     }
 
@@ -105,30 +107,30 @@ public abstract class ModularDataService<S extends ModularDataService<S>> extend
 
     public <T extends DataModule<S>> void set(T dataModule) {
         synchronized (this.lockingObject) {
-            this.cached.put(dataModule.getClass(), dataModule);
+            cached.put(dataModule.getClass(), dataModule);
         }
     }
 
     private <T extends TransientModule<S>> void setTransient(T dataModule) {
-        this.transientCache.put(dataModule.getClass(), dataModule);
+        transientCache.put(dataModule.getClass(), dataModule);
     }
 
     @Override public void loadInternal() throws Exception {
         super.loadInternal();
-        this.cached.clear(); // Only clear if no exception was caught.
+        cached.clear(); // Only clear if no exception was caught.
     }
 
     @Override public void saveInternal() throws Exception {
         try {
-            this.saveTimings.startTimingIfSync();
+            saveTimings.startTimingIfSync();
 
             // If there is nothing in the cache, don't save (because we don't need to).
-            if (this.data != null && (!this.cached.isEmpty() || !(this.data.isVirtual() || this.data.getValue() == null))) {
-                ImmutableMap.copyOf(this.cached).values().forEach(x -> x.saveTo(this.data));
+            if (data != null && (!cached.isEmpty() || !(data.isVirtual() || data.getValue() == null))) {
+                ImmutableMap.copyOf(cached).values().forEach(x -> x.saveTo(data));
                 super.saveInternal();
             }
         } finally {
-            this.saveTimings.stopTimingIfSync();
+            saveTimings.stopTimingIfSync();
         }
     }
 }

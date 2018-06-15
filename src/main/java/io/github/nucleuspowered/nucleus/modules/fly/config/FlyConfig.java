@@ -20,14 +20,14 @@ public class FlyConfig {
     private boolean permissionOnLogin = false;
 
     public boolean isSaveOnQuit() {
-        return this.saveOnQuit;
+        return saveOnQuit;
     }
 
     public boolean isPermissionOnLogin() {
-        return this.permissionOnLogin;
+        return permissionOnLogin;
     }
 
     public boolean isFindSafeOnLogin() {
-        return this.findSafeOnLogin;
+        return findSafeOnLogin;
     }
 }

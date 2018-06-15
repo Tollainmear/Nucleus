@@ -6,6 +6,8 @@ package io.github.nucleuspowered.nucleus.modules.core.config;
 
 import io.github.nucleuspowered.nucleus.internal.qsml.NucleusConfigAdapter;
 
+import java.util.List;
+
 public class CoreConfigAdapter extends NucleusConfigAdapter.StandardWithSimpleDefault<CoreConfig> {
 
     public CoreConfigAdapter() {

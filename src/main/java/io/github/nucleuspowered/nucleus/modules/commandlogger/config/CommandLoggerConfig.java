@@ -27,18 +27,18 @@ public class CommandLoggerConfig {
     private boolean logToFile = false;
 
     public LoggerTargetConfig getLoggerTarget() {
-        return this.loggerTarget;
+        return loggerTarget;
     }
 
     public boolean isWhitelist() {
-        return this.isWhitelist;
+        return isWhitelist;
     }
 
     public List<String> getCommandsToFilter() {
-        return ImmutableList.copyOf(this.commandsToFilter);
+        return ImmutableList.copyOf(commandsToFilter);
     }
 
     public boolean isLogToFile() {
-        return this.logToFile;
+        return logToFile;
     }
 }

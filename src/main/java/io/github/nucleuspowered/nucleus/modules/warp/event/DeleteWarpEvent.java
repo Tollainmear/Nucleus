@@ -24,10 +24,10 @@ public class DeleteWarpEvent extends AbstractWarpEvent implements NucleusWarpEve
     }
 
     @Override public Warp getWarp() {
-        return this.warp;
+        return warp;
     }
 
     @Override public Optional<Location<World>> getLocation() {
-        return this.warp.getLocation();
+        return warp.getLocation();
     }
 }

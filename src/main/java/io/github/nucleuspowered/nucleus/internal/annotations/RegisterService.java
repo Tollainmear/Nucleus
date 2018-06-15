@@ -38,12 +38,4 @@ public @interface RegisterService {
      */
     Class<?> apiService() default Object.class;
 
-    /**
-     * Whether this could replace an internal service.
-     *
-     * @return true if so
-     */
-    boolean replaceInternal() default false;
-
-    boolean optional() default false;
 }

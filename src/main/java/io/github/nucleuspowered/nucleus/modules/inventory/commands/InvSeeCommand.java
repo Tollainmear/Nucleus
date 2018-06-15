@@ -4,13 +4,13 @@
  */
 package io.github.nucleuspowered.nucleus.modules.inventory.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.Since;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -27,6 +27,7 @@ import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.item.inventory.Container;
 import org.spongepowered.api.item.inventory.Inventory;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.Map;
@@ -40,6 +41,7 @@ import java.util.Optional;
 @NonnullByDefault
 public class InvSeeCommand extends AbstractCommand<Player> implements Reloadable {
 
+    private final String player = "subject";
     private boolean self = false;
 
     @Override
@@ -55,25 +57,24 @@ public class InvSeeCommand extends AbstractCommand<Player> implements Reloadable
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.ONE_USER
+            SelectorWrapperArgument.nicknameSelector(Text.of(player), NicknameArgument.UnderlyingType.USER)
         };
     }
 
     @Override
     public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
-        User target = args.<User>getOne(NucleusParameters.Keys.USER).get();
+        User target = args.<User>getOne(player).get();
 
-        if (!target.isOnline() && !this.permissions.testSuffix(src, "offline")) {
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.invsee.nooffline"));
+        if (!target.isOnline() && !permissions.testSuffix(src, "offline")) {
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.invsee.nooffline"));
         }
 
         if (!this.self && target.getUniqueId().equals(src.getUniqueId())) {
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.invsee.self"));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.invsee.self"));
         }
 
-        if (this.permissions.testSuffix(target, "exempt.target", src, false)) {
-            throw new ReturnMessageException(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.invsee.targetexempt", target.getName()));
+        if (permissions.testSuffix(target, "exempt.target", src, false)) {
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.invsee.targetexempt", target.getName()));
         }
 
         // Just in case, get the subject inventory if they are online.
@@ -81,7 +82,7 @@ public class InvSeeCommand extends AbstractCommand<Player> implements Reloadable
             Inventory targetInv = target.isOnline() ? target.getPlayer().get().getInventory() : target.getInventory();
             Optional<Container> oc = src.openInventory(targetInv);
             if (oc.isPresent()) {
-                if (!this.permissions.testSuffix(src, "modify") || this.permissions.testSuffix(target, "exempt.interact")) {
+                if (!permissions.testSuffix(src, "modify") || permissions.testSuffix(target, "exempt.interact")) {
                     InvSeeListener.addEntry(src.getUniqueId(), oc.get());
                 }
 
@@ -95,7 +96,7 @@ public class InvSeeCommand extends AbstractCommand<Player> implements Reloadable
     }
 
     @Override public void onReload() {
-        this.self = Nucleus.getNucleus().getConfigValue(InventoryModule.ID, InventoryConfigAdapter.class,
+        this.self = plugin.getConfigValue(InventoryModule.ID, InventoryConfigAdapter.class,
                 InventoryConfig::isAllowInvseeOnSelf).orElse(false);
     }
 }

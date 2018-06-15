@@ -5,7 +5,6 @@
 package io.github.nucleuspowered.nucleus.modules.connection.listeners;
 
 import com.google.common.collect.Maps;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -29,7 +28,7 @@ import java.util.Map;
 
 import javax.annotation.Nullable;
 
-public class ConnectionListener implements Reloadable, ListenerBase {
+public class ConnectionListener extends ListenerBase implements Reloadable {
 
     private final String joinFullServer = PermissionRegistry.PERMISSIONS_PREFIX + "connection.joinfullserver";
 
@@ -88,8 +87,8 @@ public class ConnectionListener implements Reloadable, ListenerBase {
     }
 
     @Override
-    public void onReload() {
-        ConnectionConfig connectionConfig = Nucleus.getNucleus().getConfigAdapter(ConnectionModule.ID, ConnectionConfigAdapter.class).get().getNodeOrDefault();
+    public void onReload() throws Exception {
+        ConnectionConfig connectionConfig = this.plugin.getConfigAdapter(ConnectionModule.ID, ConnectionConfigAdapter.class).get().getNodeOrDefault();
         this.reservedSlots = connectionConfig.getReservedSlots();
         this.whitelistMessage = connectionConfig.getWhitelistMessage().orElse(null);
         this.fullMessage = connectionConfig.getServerFullMessage().orElse(null);

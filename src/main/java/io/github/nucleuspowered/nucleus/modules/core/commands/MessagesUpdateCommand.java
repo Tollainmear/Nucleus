@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.core.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -28,7 +27,7 @@ import java.util.List;
 
 @RunAsync
 @NoModifiers
-@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(prefix = "nucleus", suggestedLevel = SuggestedLevel.NONE)
 @RegisterCommand(value = "update-messages", subcommandOf = NucleusCommand.class)
 @NonnullByDefault
 public class MessagesUpdateCommand extends AbstractCommand<CommandSource> {
@@ -42,13 +41,13 @@ public class MessagesUpdateCommand extends AbstractCommand<CommandSource> {
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // First, reload the messages.
-        boolean reload = Nucleus.getNucleus().reloadMessages();
+        boolean reload = this.plugin.reloadMessages();
         if (!reload) { // only false if we can't read the custom messages file.
             // There was a failure loading a custom file
             throw ReturnMessageException.fromKey("command.nucleus.messageupdate.couldnotload");
         }
 
-        MessageProvider messageProvider = Nucleus.getNucleus().getMessageProvider();
+        MessageProvider messageProvider = plugin.getMessageProvider();
         if (!(messageProvider instanceof ConfigMessageProvider)) {
             throw new ReturnMessageException(messageProvider.getTextMessageWithFormat("command.nucleus.messageupdate.notfile"));
         }

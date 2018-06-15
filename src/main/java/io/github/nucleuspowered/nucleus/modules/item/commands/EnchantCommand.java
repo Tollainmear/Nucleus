@@ -51,39 +51,39 @@ public class EnchantCommand extends AbstractCommand<Player> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            new ImprovedCatalogTypeArgument(Text.of(this.enchantmentKey), EnchantmentType.class),
-            new BoundedIntegerArgument(Text.of(this.levelKey), 0, Short.MAX_VALUE),
+            new ImprovedCatalogTypeArgument(Text.of(enchantmentKey), EnchantmentType.class),
+            new BoundedIntegerArgument(Text.of(levelKey), 1, Short.MAX_VALUE),
             GenericArguments.flags()
-                    .permissionFlag(this.permissions.getPermissionWithSuffix("unsafe"), "u", "-unsafe")
+                    .permissionFlag(permissions.getPermissionWithSuffix("unsafe"), "u", "-unsafe")
                     .flag("o", "-overwrite")
                     .buildWith(GenericArguments.none())
         };
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         // Check for item in hand
         if (!src.getItemInHand(HandTypes.MAIN_HAND).isPresent()) {
-            sendMessageTo(src, "command.enchant.noitem");
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.noitem"));
             return CommandResult.empty();
         }
 
         // Get the arguments
         ItemStack itemInHand = src.getItemInHand(HandTypes.MAIN_HAND).get();
-        EnchantmentType enchantment = args.<EnchantmentType>getOne(this.enchantmentKey).get();
-        int level = args.<Integer>getOne(this.levelKey).get();
+        EnchantmentType enchantment = args.<EnchantmentType>getOne(enchantmentKey).get();
+        int level = args.<Integer>getOne(levelKey).get();
         boolean allowUnsafe = args.hasAny("u");
         boolean allowOverwrite = args.hasAny("o");
 
         // Can we apply the enchantment?
         if (!allowUnsafe) {
             if (!enchantment.canBeAppliedToStack(itemInHand)) {
-                sendMessageTo(src, "command.enchant.nounsafe.enchant", itemInHand);
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.nounsafe.enchant", itemInHand.getTranslation().get()));
                 return CommandResult.empty();
             }
 
             if (level > enchantment.getMaximumLevel()) {
-                sendMessageTo(src, "command.enchant.nounsafe.level", itemInHand);
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.nounsafe.level", itemInHand.getTranslation().get()));
                 return CommandResult.empty();
             }
         }
@@ -93,41 +93,30 @@ public class EnchantCommand extends AbstractCommand<Player> {
 
         // Get all the enchantments.
         List<Enchantment> currentEnchants = ed.getListValue().get();
+        List<Enchantment> enchantmentsToRemove = currentEnchants.stream()
+                .filter(x -> !x.getType().isCompatibleWith(enchantment) || x.getType().equals(enchantment))
+                .collect(Collectors.toList());
 
-        if (level == 0) {
-            // we want to remove only.
-            if (!currentEnchants.removeIf(x -> x.getType().getId().equals(enchantment.getId()))) {
-                sendMessageTo(src, "command.enchant.noenchantment", enchantment);
-                return CommandResult.empty();
-            }
-        } else {
+        if (!allowOverwrite && !enchantmentsToRemove.isEmpty()) {
+            // Build the list of the enchantment names, and send it.
+            final StringBuilder sb = new StringBuilder();
+            enchantmentsToRemove.forEach(x -> {
+                if (sb.length() > 0) {
+                    sb.append(", ");
+                }
 
-            List<Enchantment> enchantmentsToRemove = currentEnchants.stream()
-                    .filter(x -> !x.getType().isCompatibleWith(enchantment) || x.getType().equals(enchantment))
-                    .collect(Collectors.toList());
+                sb.append(Util.getTranslatableIfPresent(x.getType()));
+            });
 
-            if (!allowOverwrite && !enchantmentsToRemove.isEmpty()) {
-                // Build the list of the enchantment names, and send it.
-                final StringBuilder sb = new StringBuilder();
-                enchantmentsToRemove.forEach(x -> {
-                    if (sb.length() > 0) {
-                        sb.append(", ");
-                    }
-
-                    sb.append(Util.getTranslatableIfPresent(x.getType()));
-                });
-
-                sendMessageTo(src, "command.enchant.overwrite", sb.toString());
-                return CommandResult.empty();
-            }
-
-            // Remove all enchants that cannot co-exist.
-            currentEnchants.removeIf(enchantmentsToRemove::contains);
-
-            // Create the enchantment
-            currentEnchants.add(Enchantment.of(enchantment, level));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.overwrite", sb.toString()));
+            return CommandResult.empty();
         }
 
+        // Remove all enchants that cannot co-exist.
+        currentEnchants.removeIf(enchantmentsToRemove::contains);
+
+        // Create the enchantment
+        currentEnchants.add(Enchantment.of(enchantment, level));
         ed.setElements(currentEnchants);
 
         // Offer it to the item.
@@ -135,15 +124,11 @@ public class EnchantCommand extends AbstractCommand<Player> {
         if (dtr.isSuccessful()) {
             // If successful, we need to put the item in the player's hand for it to actually take effect.
             src.setItemInHand(HandTypes.MAIN_HAND, itemInHand);
-            if (level == 0) {
-                sendMessageTo(src, "command.enchant.removesuccess", enchantment);
-            } else {
-                sendMessageTo(src, "command.enchant.success", enchantment, level);
-            }
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.success", Util.getTranslatableIfPresent(enchantment), String.valueOf(level)));
             return CommandResult.success();
         }
 
-        sendMessageTo(src, "command.enchant.error", enchantment, level);
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.enchant.error", Util.getTranslatableIfPresent(enchantment), String.valueOf(level)));
         return CommandResult.empty();
     }
 }

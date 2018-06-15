@@ -8,11 +8,12 @@ import com.google.common.collect.Lists;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
+import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
-import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
+import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.modules.kit.commands.kit.KitCommand;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -30,36 +31,36 @@ import java.util.List;
 @RunAsync
 @Permissions(prefix = "kit")
 @RegisterCommand(value = {"command", "commands"}, subcommandOf = KitCommand.class)
-public class KitCommandCommand extends KitFallbackBase<CommandSource> {
+public class KitCommandCommand extends AbstractCommand<CommandSource> {
 
+    private final String key = "kit";
     private final String removePermission = Nucleus.getNucleus().getPermissionRegistry()
             .getPermissionsForNucleusCommand(KitRemoveCommandCommand.class).getBase();
     private final Text removeIcon = Text.of(TextColors.WHITE, "[", TextColors.DARK_RED, "X", TextColors.WHITE, "]");
 
     @Override public CommandElement[] getArguments() {
         return new CommandElement[] {
-                KitFallbackBase.KIT_PARAMETER_PERM_CHECK
+            new KitArgument(Text.of(key), true)
         };
     }
 
-    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) {
+    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // List all commands on a kit.
-        Kit kit = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+        Kit kit = args.<Kit>getOne(key).get();
         List<String> commands = kit.getCommands();
 
         if (commands.isEmpty()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.command.nocommands", kit.getName()));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.nocommands", kit.getName()));
         } else {
             List<Text> cc = Lists.newArrayList();
             for (int i = 0; i < commands.size(); i++) {
-                Text t = Nucleus.getNucleus()
-                        .getMessageProvider().getTextMessageWithFormat("command.kit.command.commands.entry", String.valueOf(i + 1), commands.get(i));
-                if (src.hasPermission(this.removePermission)) {
+                Text t = plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.commands.entry", String.valueOf(i + 1), commands.get(i));
+                if (src.hasPermission(removePermission)) {
                     t = Text.of(
-                            Text.builder().append(this.removeIcon)
+                            Text.builder().append(removeIcon)
                                 .onClick(TextActions.runCommand("/nucleus:kit command remove " + kit.getName() + " " + commands.get(i)))
                                 .onHover(TextActions.showText(
-                                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.command.removehover"))).build()
+                                    plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.removehover"))).build()
                             , " ", t);
                 }
 
@@ -67,7 +68,7 @@ public class KitCommandCommand extends KitFallbackBase<CommandSource> {
             }
 
             Util.getPaginationBuilder(src)
-                .title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.command.commands.title", kit.getName()))
+                .title(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.command.commands.title", kit.getName()))
                 .contents(cc)
                 .sendTo(src);
         }

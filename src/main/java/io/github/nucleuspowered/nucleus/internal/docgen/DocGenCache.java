@@ -6,7 +6,6 @@ package io.github.nucleuspowered.nucleus.internal.docgen;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.reflect.TypeToken;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.configurate.ConfigurateHelper;
 import io.github.nucleuspowered.nucleus.internal.annotations.Since;
@@ -21,16 +20,12 @@ import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.internal.qsml.NucleusConfigAdapter;
 import io.github.nucleuspowered.nucleus.internal.qsml.module.ConfigurableModule;
-import ninja.leaping.configurate.ConfigurationNode;
 import ninja.leaping.configurate.ConfigurationOptions;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.text.Text;
-import uk.co.drnaylor.quickstart.config.AbstractConfigAdapter;
 
 import java.io.BufferedWriter;
 import java.io.StringWriter;
@@ -57,55 +52,39 @@ public class DocGenCache {
     }
 
     public List<CommandDoc> getCommandDocs() {
-        return this.commandDocs;
+        return commandDocs;
     }
 
     public Collection<PermissionDoc> getPermissionDocs() {
-        return this.permissionDocs.values();
+        return permissionDocs.values();
     }
 
     public List<TokenDoc> getTokenDocs() {
-        return this.tokenDocs;
+        return tokenDocs;
     }
 
     public List<EssentialsDoc> getEssentialsDocs() {
-        return this.essentialsDocs;
+        return essentialsDocs;
     }
 
     public Map<String, String> getConfigDocs() {
-        return this.configDocs;
+        return configDocs;
     }
 
     public void addConfigurableModule(String name, ConfigurableModule<?> module) {
         try (StringWriter sw = new StringWriter(); BufferedWriter writer = new BufferedWriter(sw)) {
             HoconConfigurationLoader hcl = HoconConfigurationLoader.builder()
-                    .setDefaultOptions(ConfigurateHelper.setOptions(ConfigurationOptions.defaults()))
-                    .setSink(() -> writer)
-                    .build();
-            CommentedConfigurationNode cn = hcl.createEmptyNode(ConfigurateHelper.setOptions(hcl.getDefaultOptions()));
-            AbstractConfigAdapter<?> aca = module.getConfigAdapter().get();
-            if (aca instanceof NucleusConfigAdapter.StandardWithSimpleDefault) {
-                NucleusConfigAdapter.StandardWithSimpleDefault<?> nca = (NucleusConfigAdapter.StandardWithSimpleDefault<?>) aca;
-                Object o = nca.getDefaultObject();
-                applyToNode(o.getClass(), o, cn);
-            } else {
-                cn.setValue(module.getConfigAdapter().get().getDefaults());
-            }
-
+                .setDefaultOptions(ConfigurateHelper.setOptions(ConfigurationOptions.defaults()))
+                .setSink(() -> writer)
+                .build();
+            CommentedConfigurationNode cn = hcl.createEmptyNode(hcl.getDefaultOptions());
+            cn.setValue(module.getConfigAdapter().get().getDefaults());
             hcl.save(cn);
             this.configDocs.put(name, sw.toString());
         } catch (Exception e) {
             e.printStackTrace();
         }
 
-    }
-
-    private <T> void applyToNode(Class<T> c, Object object, ConfigurationNode node) {
-        try {
-            node.setValue(TypeToken.of(c), c.cast(object));
-        } catch (ObjectMappingException e) {
-            e.printStackTrace();
-        }
     }
 
     public void addCommand(final String moduleID, final AbstractCommand<?> abstractCommand) {
@@ -144,7 +123,7 @@ public class DocGenCache {
 
         String desc = abstractCommand.getDescription();
         if (!desc.contains(" ")) {
-            this.logger.warn("Cannot generate description for: " + abstractCommand.getCommandPath() + ": " + desc);
+            logger.warn("Cannot generate description for: " + abstractCommand.getAliases()[0] + ": " + desc);
         }
         cmd.setOneLineDescription(desc);
 
@@ -188,10 +167,10 @@ public class DocGenCache {
             doc.setNucleusEquiv(a);
             doc.setExact(ee.isExact());
             doc.setNotes(ee.notes());
-            this.essentialsDocs.add(doc);
+            essentialsDocs.add(doc);
         }
 
-        this.commandDocs.add(cmd);
+        commandDocs.add(cmd);
     }
 
     public void addPermissionDocs(final String moduleID, Map<String, PermissionInformation> msp) {
@@ -200,11 +179,11 @@ public class DocGenCache {
 
     private PermissionDoc addPermissionDocs(final String moduleID, String k, PermissionInformation v) {
         PermissionDoc pd;
-        if (!this.permissionDocs.containsKey(k)) {
+        if (!permissionDocs.containsKey(k)) {
             pd = getPermissionFrom(moduleID, k, v);
-            this.permissionDocs.put(k, pd);
+            permissionDocs.put(k, pd);
         } else {
-            pd = this.permissionDocs.get(k);
+            pd = permissionDocs.get(k);
             if (!pd.getDescription().contains(v.plainDescription)) {
                 pd.setDescription(pd.getDescription().replaceAll("\\.$", "") + ", " + v.plainDescription);
             }
@@ -215,7 +194,7 @@ public class DocGenCache {
 
     public void addTokenDocs(Set<String> tokens) {
         tokens.forEach(x -> Nucleus.getNucleus().getMessageProvider().getMessageFromKey("nucleus.token." + x.toLowerCase()).ifPresent(y ->
-                this.tokenDocs.add(new TokenDoc().setName(x.toLowerCase()).setDescription(y))
+            tokenDocs.add(new TokenDoc().setName(x.toLowerCase()).setDescription(y))
         ));
     }
 

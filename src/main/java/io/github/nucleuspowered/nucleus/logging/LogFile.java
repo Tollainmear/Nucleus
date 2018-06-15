@@ -32,8 +32,8 @@ class LogFile implements Closeable {
 
     void writeLine(String line) throws IOException {
         try {
-            this.outputStream.write(this.formatter.apply(line));
-            this.outputStream.newLine();
+            outputStream.write(formatter.apply(line));
+            outputStream.newLine();
         } catch (IOException e) {
             close();
             throw e;
@@ -41,25 +41,25 @@ class LogFile implements Closeable {
     }
 
     void flush() throws IOException {
-        this.outputStream.flush();
+        outputStream.flush();
     }
 
     boolean isClosed() {
-        return this.isClosed;
+        return isClosed;
     }
 
     @Override
     public void close() throws IOException {
-        if (this.isClosed) {
+        if (isClosed) {
             return;
         }
 
         try {
-            this.outputStream.close();
+            outputStream.close();
         } finally {
-            this.isClosed = true;
+            isClosed = true;
 
-            Util.compressAndDeleteFile(this.location);
+            Util.compressAndDeleteFile(location);
         }
     }
 }

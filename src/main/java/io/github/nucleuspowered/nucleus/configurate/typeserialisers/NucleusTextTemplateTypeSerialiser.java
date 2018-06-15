@@ -25,7 +25,7 @@ public class NucleusTextTemplateTypeSerialiser implements TypeSerializer<Nucleus
         }
     }
 
-    @Override public void serialize(TypeToken<?> type, NucleusTextTemplateImpl obj, ConfigurationNode value) {
+    @Override public void serialize(TypeToken<?> type, NucleusTextTemplateImpl obj, ConfigurationNode value) throws ObjectMappingException {
         value.setValue(obj.getRepresentation());
     }
 }

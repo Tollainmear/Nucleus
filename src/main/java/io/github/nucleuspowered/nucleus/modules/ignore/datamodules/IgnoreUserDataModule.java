@@ -19,12 +19,12 @@ public class IgnoreUserDataModule extends DataModule<ModularUserService> {
     private List<UUID> ignoreList = Lists.newArrayList();
 
     public List<UUID> getIgnoreList() {
-        return ImmutableList.copyOf(this.ignoreList);
+        return ImmutableList.copyOf(ignoreList);
     }
 
     public boolean addToIgnoreList(UUID uuid) {
-        if (!this.ignoreList.contains(uuid)) {
-            this.ignoreList.add(uuid);
+        if (!ignoreList.contains(uuid)) {
+            ignoreList.add(uuid);
             return true;
         }
 
@@ -32,7 +32,7 @@ public class IgnoreUserDataModule extends DataModule<ModularUserService> {
     }
 
     public boolean removeFromIgnoreList(UUID uuid) {
-        return this.ignoreList.remove(uuid);
+        return ignoreList.remove(uuid);
     }
 
 }

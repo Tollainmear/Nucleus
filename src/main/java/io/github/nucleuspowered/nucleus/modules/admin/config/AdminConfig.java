@@ -14,7 +14,7 @@ public class AdminConfig {
     private BroadcastConfig broadcastMessage = new BroadcastConfig();
 
     public BroadcastConfig getBroadcastMessage() {
-        return this.broadcastMessage;
+        return broadcastMessage;
     }
 
 }

@@ -25,7 +25,7 @@ public class EssentialsDoc {
     private String notes;
 
     public List<String> getEssentialsCommands() {
-        return this.essentialsCommands;
+        return essentialsCommands;
     }
 
     public void setEssentialsCommands(List<String> essentialsCommands) {
@@ -33,7 +33,7 @@ public class EssentialsDoc {
     }
 
     public List<String> getNucleusEquiv() {
-        return this.nucleusEquiv;
+        return nucleusEquiv;
     }
 
     public void setNucleusEquiv(List<String> nucleusEquiv) {
@@ -41,15 +41,15 @@ public class EssentialsDoc {
     }
 
     public boolean isExact() {
-        return this.isExact;
+        return isExact;
     }
 
     public void setExact(boolean exact) {
-        this.isExact = exact;
+        isExact = exact;
     }
 
     public String getNotes() {
-        return this.notes;
+        return notes;
     }
 
     public void setNotes(String notes) {

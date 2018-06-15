@@ -37,7 +37,7 @@ public final class NucleusAPIMetaService {
      * @return The version. This might include specifiers like "-SNAPSHOT" or "-PR1".
      */
     public String version() {
-        return this.version;
+        return version;
     }
 
     /**
@@ -46,7 +46,7 @@ public final class NucleusAPIMetaService {
      * @return The semantic version.
      */
     public String semanticVersion() {
-        return this.semver;
+        return semver;
     }
 
     /**
@@ -82,7 +82,7 @@ public final class NucleusAPIMetaService {
      * @return <code>true</code> if so.
      */
     public boolean isRelease() {
-        return this.release;
+        return release;
     }
 
     private int parse(String string) {

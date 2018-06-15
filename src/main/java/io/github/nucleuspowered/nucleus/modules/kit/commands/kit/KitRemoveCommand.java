@@ -4,18 +4,21 @@
  */
 package io.github.nucleuspowered.nucleus.modules.kit.commands.kit;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
+import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
+import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
+import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 /**
@@ -28,20 +31,21 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @RunAsync
 @NoModifiers
 @NonnullByDefault
-public class KitRemoveCommand extends KitFallbackBase<CommandSource> {
+public class KitRemoveCommand extends AbstractCommand<CommandSource> {
+
+    private final KitHandler handler = getServiceUnchecked(KitHandler.class);
+    private final String kit = "kit";
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {
-                KitFallbackBase.KIT_PARAMETER_NO_PERM_CHECK
-        };
+        return new CommandElement[] {GenericArguments.onlyOne(new KitArgument(Text.of(kit), false))};
     }
 
     @Override
-    public CommandResult executeCommand(final CommandSource player, CommandContext args) {
-        Kit kitName = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
-        KIT_HANDLER.removeKit(kitName.getName());
-        player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.remove.success", kitName.getName()));
+    public CommandResult executeCommand(final CommandSource player, CommandContext args) throws Exception {
+        Kit kitName = args.<Kit>getOne(kit).get();
+        handler.removeKit(kitName.getName());
+        player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.remove.success", kitName.getName()));
         return CommandResult.success();
     }
 }

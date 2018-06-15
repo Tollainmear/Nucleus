@@ -8,12 +8,10 @@ import com.flowpowered.math.GenericMath;
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.NucleusPlugin;
-import io.github.nucleuspowered.nucleus.dataservices.modular.ModularWorldService;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.modules.world.commands.border.GenerateChunksCommand;
 import io.github.nucleuspowered.nucleus.modules.world.config.WorldConfig;
 import io.github.nucleuspowered.nucleus.modules.world.config.WorldConfigAdapter;
-import io.github.nucleuspowered.nucleus.modules.world.datamodules.WorldgenWorldDataModule;
 import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.spongepowered.api.event.world.ChunkPreGenerationEvent;
 import org.spongepowered.api.text.Text;
@@ -42,55 +40,42 @@ public class WorldHelper implements Reloadable {
     private static final String notifyPermission = Nucleus.getNucleus().getPermissionRegistry()
         .getPermissionsForNucleusCommand(GenerateChunksCommand.class).getPermissionWithSuffix("notify");
 
+    private final Nucleus plugin = Nucleus.getNucleus();
+
     private final Map<UUID, ChunkPreGenerate> pregen = Maps.newHashMap();
 
     public boolean isPregenRunningForWorld(UUID uuid) {
         cleanup();
-        return this.pregen.containsKey(uuid);
+        return pregen.containsKey(uuid);
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         WorldConfig config = Nucleus.getNucleus().getConfigValue(WorldModule.ID, WorldConfigAdapter.class, c -> c).orElseGet(WorldConfig::new);
         this.notify = config.isDisplayAfterEachGen();
         this.display = config.isDisplayWarningGeneration();
         this.timeToNotify = config.getNotificationInterval() * 1000L;
     }
 
-    public boolean startPregenningForWorld(World world, boolean aggressive, long saveTime, @Nullable Integer tickPercent,
-            @Nullable Integer tickFrequency, boolean onRestart) {
+    public boolean startPregenningForWorld(World world, boolean aggressive, long saveTime, @Nullable Integer tickPercent, @Nullable Integer tickFrequency) {
         cleanup();
         if (!isPregenRunningForWorld(world.getUniqueId())) {
             WorldProperties wp = world.getProperties();
             ChunkPreGenerate.Builder wbcp = world.newChunkPreGenerate(wp.getWorldBorderCenter(), wp.getWorldBorderDiameter())
-                .owner(Nucleus.getNucleus()).addListener(new Listener(aggressive, saveTime));
+                .owner(plugin).addListener(new Listener(aggressive, saveTime));
             if (aggressive) {
                 wbcp.tickPercentLimit(0.9f).tickInterval(3);
             }
 
             if (tickPercent != null) {
                 wbcp.tickPercentLimit(Math.max(0f, Math.min(tickPercent / 100.0f, 1f)));
-            } else {
-                tickPercent = aggressive ? 90 : 80;
             }
 
             if (tickFrequency != null) {
                 wbcp.tickInterval(Math.max(1, tickFrequency));
-            } else {
-                tickFrequency = 4;
             }
 
-            if (onRestart) {
-                ModularWorldService service = Nucleus.getNucleus().getWorldDataManager().get(world.getUniqueId(), true).get();
-                WorldgenWorldDataModule module = service.get(WorldgenWorldDataModule.class);
-                module.setStart(true).setAggressive(aggressive).setSaveTime(saveTime)
-                        .setTickFreq(tickFrequency)
-                        .setTickPercent(tickPercent);
-                service.set(module);
-                service.save();
-            }
-
-            this.pregen.put(world.getUniqueId(), wbcp.start());
+            pregen.put(world.getUniqueId(), wbcp.start());
             return true;
         }
 
@@ -99,8 +84,8 @@ public class WorldHelper implements Reloadable {
 
     public boolean cancelPregenRunningForWorld(UUID uuid) {
         cleanup();
-        if (this.pregen.containsKey(uuid)) {
-            ChunkPreGenerate cpg = this.pregen.remove(uuid);
+        if (pregen.containsKey(uuid)) {
+            ChunkPreGenerate cpg = pregen.remove(uuid);
             getChannel().send(
                 NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.pregen.gen.cancelled2",
                     String.valueOf(cpg.getTotalGeneratedChunks()),
@@ -116,7 +101,7 @@ public class WorldHelper implements Reloadable {
     }
 
     private synchronized void cleanup() {
-        this.pregen.entrySet().removeIf(x -> x.getValue().isCancelled());
+        pregen.entrySet().removeIf(x -> x.getValue().isCancelled());
     }
 
     private MessageChannel getChannel() {
@@ -144,20 +129,20 @@ public class WorldHelper implements Reloadable {
                 if (!this.aggressive) {
                     long percent = getMemPercent();
                     if (percent >= 90) {
-                        if (!this.highMemTriggered) {
+                        if (!highMemTriggered) {
                             event.getTargetWorld().getLoadedChunks().forEach(Chunk::unloadChunk);
                             save(event.getTargetWorld());
                             NucleusPlugin.getNucleus().getMessageProvider()
                                 .getTextMessageWithFormat("command.pregen.gen.memory.high", String.valueOf(percent));
-                            this.highMemTriggered = true;
+                            highMemTriggered = true;
                             save(event.getTargetWorld());
                         }
 
                         // Try again next tick.
                         ((ChunkPreGenerationEvent.Pre) event).setSkipStep(true);
-                    } else if (this.highMemTriggered && percent <= 80) {
+                    } else if (highMemTriggered && percent <= 80) {
                         // Get the memory usage down to 80% to prevent too much ping pong.
-                        this.highMemTriggered = false;
+                        highMemTriggered = false;
                         NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.pregen.gen.memory.low");
                     }
                 }
@@ -210,9 +195,6 @@ public class WorldHelper implements Reloadable {
                         DurationFormatUtils.formatDuration(this.time, TIME_FORMAT, false),
                         DurationFormatUtils.formatDuration(cpg.getTotalTime().toMillis(), TIME_FORMAT, false)
                     ));
-                ModularWorldService m = Nucleus.getNucleus().getWorldDataManager().getWorld(event.getTargetWorld()).get();
-                m.set(m.get(WorldgenWorldDataModule.class).setStart(false));
-                m.save();
             }
         }
 

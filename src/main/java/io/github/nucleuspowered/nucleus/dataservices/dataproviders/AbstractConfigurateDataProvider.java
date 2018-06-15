@@ -27,25 +27,27 @@ public abstract class AbstractConfigurateDataProvider<T> implements DataProvider
 
     protected final ConfigurationLoader<?> loader;
     private final Path file;
+    private final boolean requiresChildren;
     private final Path backupFile;
     private final Logger logger;
 
-    public AbstractConfigurateDataProvider(Function<Path, ConfigurationLoader<?>>  loaderProvider, Path file, Logger logger) {
+    public AbstractConfigurateDataProvider(Function<Path, ConfigurationLoader<?>>  loaderProvider, Path file, boolean requiresChildren, Logger logger) {
         this.loader = loaderProvider.apply(file);
         this.provider = loaderProvider;
         this.file = file;
         this.backupFile = Paths.get(file.toAbsolutePath().toString() + ".bak");
+        this.requiresChildren = requiresChildren;
         this.logger = logger;
     }
 
     @Override public boolean has() {
-        return Files.exists(this.file);
+        return Files.exists(file);
     }
 
     @Override
     public T load() throws Exception {
         try {
-            return transformOnLoad(this.loader.load(setOptions(getOptions())));
+            return transformOnLoad(loader.load(setOptions(getOptions())));
         } catch (Exception e) {
             return loadBackup().orElseThrow(() -> e);
         }
@@ -57,12 +59,12 @@ public abstract class AbstractConfigurateDataProvider<T> implements DataProvider
 
     private Optional<T> loadBackup() {
         try {
-            if (Files.exists(this.backupFile)) {
-                this.logger.warn("Could not load " + this.file.toAbsolutePath().toString() + ", attempting to load backup.");
-                return Optional.of(transformOnLoad(this.provider.apply(this.backupFile).load(setOptions(getOptions()))));
+            if (Files.exists(backupFile)) {
+                logger.warn("Could not load " + file.toAbsolutePath().toString() + ", attempting to load backup.");
+                return Optional.of(transformOnLoad(this.provider.apply(backupFile).load(setOptions(getOptions()))));
             }
         } catch (Exception e) {
-            this.logger.warn("Could not load " + this.backupFile.toAbsolutePath().toString() + " either.");
+            logger.warn("Could not load " + backupFile.toAbsolutePath().toString() + " either.");
         }
 
         return Optional.empty();
@@ -75,17 +77,19 @@ public abstract class AbstractConfigurateDataProvider<T> implements DataProvider
             throw getException("Configuration Node is null.");
         } else if (node.isVirtual()) {
             throw getException("Configuration Node is virtual.");
+        } else if (requiresChildren && (!node.hasMapChildren() && !node.hasListChildren())) {
+            throw getException("Configuration Node has no children.");
         }
 
         try {
-            if (Files.exists(this.file)) {
-                Files.copy(this.file, this.backupFile, StandardCopyOption.REPLACE_EXISTING);
+            if (Files.exists(file)) {
+                Files.copy(file, backupFile, StandardCopyOption.REPLACE_EXISTING);
             }
 
-            this.loader.save(node);
+            loader.save(node);
         } catch (IOException e) {
-            if (Files.exists(this.backupFile)) {
-                Files.copy(this.backupFile, this.file, StandardCopyOption.REPLACE_EXISTING);
+            if (Files.exists(backupFile)) {
+                Files.copy(backupFile, file, StandardCopyOption.REPLACE_EXISTING);
             }
 
             throw getException(e);
@@ -94,18 +98,18 @@ public abstract class AbstractConfigurateDataProvider<T> implements DataProvider
 
     @Override
     public void delete() throws Exception {
-        Files.delete(this.file);
+        Files.delete(file);
     }
 
     private ConfigurationOptions getOptions() {
-        return setOptions(this.loader.getDefaultOptions());
+        return setOptions(loader.getDefaultOptions());
     }
 
     private IllegalStateException getException(String message) {
-        return new IllegalStateException("The file " + this.file.getFileName() + " has not been saved.\n" + message);
+        return new IllegalStateException("The file " + file.getFileName() + " has not been saved.\n" + message);
     }
 
     private IOException getException(Throwable inner) {
-        return new IOException("The file " + this.file.getFileName() + " has not been saved - an exception was thrown.", inner);
+        return new IOException("The file " + file.getFileName() + " has not been saved - an exception was thrown.", inner);
     }
 }

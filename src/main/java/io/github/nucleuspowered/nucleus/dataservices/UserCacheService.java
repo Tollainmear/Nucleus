@@ -27,34 +27,34 @@ public class UserCacheService extends AbstractService<UserCacheVersionNode> {
 
     private final Object lockingObject = new Object();
 
-    public UserCacheService(DataProvider<UserCacheVersionNode> dataProvider) {
+    public UserCacheService(DataProvider<UserCacheVersionNode> dataProvider) throws Exception {
         super(dataProvider);
     }
 
     public List<UUID> getForIp(String ip) {
         updateCacheForOnlinePlayers();
         String ipToCheck = ip.replace("/", "");
-        return this.data.getNode().entrySet().stream().filter(x -> x.getValue()
+        return data.getNode().entrySet().stream().filter(x -> x.getValue()
                 .getIpAddress().map(y -> y.equals(ipToCheck)).orElse(false))
                 .map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
     public List<UUID> getJailed() {
         updateCacheForOnlinePlayers();
-        return this.data.getNode().entrySet().stream().filter(x -> x.getValue().isJailed())
+        return data.getNode().entrySet().stream().filter(x -> x.getValue().isJailed())
                 .map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
     public List<UUID> getJailedIn(String name) {
         updateCacheForOnlinePlayers();
-        return this.data.getNode().entrySet().stream()
+        return data.getNode().entrySet().stream()
                 .filter(x -> x.getValue().getJailName().map(y -> y.equalsIgnoreCase(name)).orElse(false))
                 .map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
     public List<UUID> getMuted() {
         updateCacheForOnlinePlayers();
-        return this.data.getNode().entrySet().stream().filter(x -> x.getValue().isMuted())
+        return data.getNode().entrySet().stream().filter(x -> x.getValue().isMuted())
                 .map(Map.Entry::getKey).collect(Collectors.toList());
     }
 
@@ -64,11 +64,11 @@ public class UserCacheService extends AbstractService<UserCacheVersionNode> {
 
     public void updateCacheForOnlinePlayers() {
         Nucleus.getNucleus().getUserDataManager().getOnlineUsers().forEach(u ->
-                this.data.getNode().computeIfAbsent(u.getUniqueId(), x -> new UserCacheDataNode()).set(u));
+                data.getNode().computeIfAbsent(u.getUniqueId(), x -> new UserCacheDataNode()).set(u));
     }
 
     public void updateCacheForPlayer(ModularUserService u) {
-        this.data.getNode().computeIfAbsent(u.getUniqueId(), x -> new UserCacheDataNode()).set(u);
+        data.getNode().computeIfAbsent(u.getUniqueId(), x -> new UserCacheDataNode()).set(u);
     }
 
     public void updateCacheForPlayer(UUID uuid) {
@@ -76,22 +76,22 @@ public class UserCacheService extends AbstractService<UserCacheVersionNode> {
     }
 
     public void startFilewalkIfNeeded() {
-        if (!this.isWalking && (!isCorrectVersion() || this.data.getNode().isEmpty())) {
+        if (!this.isWalking && (!isCorrectVersion() || data.getNode().isEmpty())) {
             fileWalk();
         }
     }
 
     public boolean isCorrectVersion() {
-        return expectedVersion == this.data.getVersion();
+        return expectedVersion == data.getVersion();
     }
 
     public boolean fileWalk() {
-        synchronized (this.lockingObject) {
-            if (this.isWalking) {
+        synchronized (lockingObject) {
+            if (isWalking) {
                 return false;
             }
 
-            this.isWalking = true;
+            isWalking = true;
         }
 
         try {
@@ -115,7 +115,7 @@ public class UserCacheService extends AbstractService<UserCacheVersionNode> {
             this.data.getNode().putAll(data);
             save();
         } finally {
-            this.isWalking = false;
+            isWalking = false;
         }
 
         return true;

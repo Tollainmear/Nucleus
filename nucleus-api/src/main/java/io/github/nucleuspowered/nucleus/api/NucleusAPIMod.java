@@ -23,7 +23,7 @@ public final class NucleusAPIMod {
 
     @Listener
     public void onPreInit(GamePreInitializationEvent event) {
-        this.logger.info("Loading " + NucleusAPITokens.NAME + " for Nucleus version " + NucleusAPITokens.VERSION);
+        logger.info("Loading " + NucleusAPITokens.NAME + " for Nucleus version " + NucleusAPITokens.VERSION);
         NucleusAPITokens.onPreInit(this);
     }
 }

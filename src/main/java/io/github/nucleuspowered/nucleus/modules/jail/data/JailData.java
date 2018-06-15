@@ -79,34 +79,34 @@ public final class JailData extends EndTimestamp implements Inmate {
     }
 
     @Override public String getReason() {
-        return this.reason;
+        return reason;
     }
 
     @Override public String getJailName() {
-        return this.jailName;
+        return jailName;
     }
 
     @Override public Optional<UUID> getJailer() {
-        return this.jailer.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(this.jailer);
+        return jailer.equals(Util.consoleFakeUUID) ? Optional.empty() : Optional.of(jailer);
     }
 
     public Optional<Instant> getCreationInstant() {
-        return this.creationTime > 0 ? Optional.of(Instant.ofEpochSecond(this.creationTime)) : Optional.empty();
+        return creationTime > 0 ? Optional.of(Instant.ofEpochSecond(creationTime)) : Optional.empty();
     }
 
     public long getCreationTime() {
-        return this.creationTime;
+        return creationTime;
     }
 
     public UUID getJailerInternal() {
-        return this.jailer;
+        return jailer;
     }
 
     @Override public Optional<Location<World>> getPreviousLocation() {
-        if (this.world != null) {
-            Optional<World> ow = Sponge.getServer().getWorld(this.world);
-            if (ow.isPresent() && this.previousx != 0 && this.previousy != -1 && this.previousz != 0) {
-                return Optional.of(new Location<>(ow.get(), this.previousx, this.previousy, this.previousz));
+        if (world != null) {
+            Optional<World> ow = Sponge.getServer().getWorld(world);
+            if (ow.isPresent() && previousx != 0 && previousy != -1 && previousz != 0) {
+                return Optional.of(new Location<>(ow.get(), previousx, previousy, previousz));
             }
         }
 

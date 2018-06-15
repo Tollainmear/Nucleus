@@ -21,21 +21,17 @@ public final class InternalServiceManager {
     }
 
     public <I, C extends I> void registerService(Class<I> key, C service) {
-        registerService(key, service, false);
-    }
-
-    public <I, C extends I> void registerService(Class<I> key, C service, boolean rereg) {
-        if (!rereg && this.serviceMap.containsKey(key)) {
+        if (serviceMap.containsKey(key)) {
             return;
         }
 
-        this.serviceMap.put(key, service);
+        serviceMap.put(key, service);
     }
 
     @SuppressWarnings("unchecked")
     public <I> Optional<I> getService(Class<I> key) {
-        if (this.serviceMap.containsKey(key)) {
-            return Optional.of((I) this.serviceMap.get(key));
+        if (serviceMap.containsKey(key)) {
+            return Optional.of((I)serviceMap.get(key));
         }
 
         return Optional.empty();
@@ -43,8 +39,8 @@ public final class InternalServiceManager {
 
     @SuppressWarnings("unchecked")
     public <I> I getServiceUnchecked(Class<I> key) {
-        if (this.serviceMap.containsKey(key)) {
-            return (I) this.serviceMap.get(key);
+        if (serviceMap.containsKey(key)) {
+            return (I)serviceMap.get(key);
         }
 
         throw new NoSuchElementException(key.getName());

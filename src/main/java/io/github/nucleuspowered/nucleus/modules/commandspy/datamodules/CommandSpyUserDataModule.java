@@ -14,10 +14,10 @@ public class CommandSpyUserDataModule extends DataModule<ModularUserService> {
     private boolean isCommandSpy = false;
 
     public boolean isCommandSpy() {
-        return this.isCommandSpy;
+        return isCommandSpy;
     }
 
     public void setCommandSpy(boolean commandSpy) {
-        this.isCommandSpy = commandSpy;
+        isCommandSpy = commandSpy;
     }
 }

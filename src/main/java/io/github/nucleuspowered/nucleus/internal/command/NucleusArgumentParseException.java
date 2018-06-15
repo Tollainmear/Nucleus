@@ -38,7 +38,7 @@ public class NucleusArgumentParseException extends ArgumentParseException {
 
     @Override public Text getText() {
         Text t = super.getText();
-        if (this.usage == null && this.subcommands == null) {
+        if (usage == null && subcommands == null) {
             return t;
         }
 
@@ -48,11 +48,11 @@ public class NucleusArgumentParseException extends ArgumentParseException {
     @Nullable public Text getUsage() {
         Text.Builder builder = Text.builder();
         MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
-        if (this.usage != null) {
+        if (usage != null) {
             builder.append(Text.NEW_LINE).append(mp.getTextMessageWithTextFormat("command.exception.usage", this.usage));
         }
 
-        if (this.subcommands != null) {
+        if (subcommands != null) {
             builder.append(Text.NEW_LINE).append(mp.getTextMessageWithTextFormat("command.exception.subcommands", this.subcommands));
         }
 
@@ -64,6 +64,6 @@ public class NucleusArgumentParseException extends ArgumentParseException {
     }
 
     public boolean isEnd() {
-        return this.isEnd;
+        return isEnd;
     }
 }

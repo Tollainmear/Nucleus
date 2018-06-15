@@ -6,12 +6,13 @@ package io.github.nucleuspowered.nucleus.modules.environment.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
+import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.TimespanArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.WeatherArgument;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularWorldService;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -41,11 +42,13 @@ import java.util.Optional;
 @EssentialsEquivalent({"thunder", "sun", "weather", "sky", "storm", "rain"})
 public class WeatherCommand extends AbstractCommand<CommandSource> implements Reloadable {
 
+    private final String world = "world";
     private final String weather = "weather";
+    private final String duration = "duration";
 
     private long max = Long.MAX_VALUE;
 
-    @Override public void onReload() {
+    @Override public void onReload() throws Exception {
         this.max = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(EnvironmentConfigAdapter.class).getNodeOrDefault()
                 .getMaximumWeatherTimespan();
     }
@@ -60,16 +63,17 @@ public class WeatherCommand extends AbstractCommand<CommandSource> implements Re
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[]{
-                NucleusParameters.OPTIONAL_WEAK_WORLD_PROPERTIES_ENABLED_ONLY,
-                GenericArguments.onlyOne(new WeatherArgument(Text.of(this.weather))), // More flexible with the arguments we can use.
-                NucleusParameters.OPTIONAL_DURATION
+                GenericArguments.optionalWeak(GenericArguments.onlyOne(
+                        new NucleusWorldPropertiesArgument(Text.of(world), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY))),
+                GenericArguments.onlyOne(new WeatherArgument(Text.of(weather))), // More flexible with the arguments we can use.
+                GenericArguments.onlyOne(GenericArguments.optional(new TimespanArgument(Text.of(duration))))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // We can predict the weather on multiple worlds now!
-        WorldProperties wp = this.getWorldFromUserOrArgs(src, NucleusParameters.Keys.WORLD, args);
+        WorldProperties wp = this.getWorldFromUserOrArgs(src, world, args);
         World w = Sponge.getServer().getWorld(wp.getUniqueId())
             .orElseThrow(() -> ReturnMessageException.fromKey("args.worldproperties.notloaded", wp.getWorldName()));
 
@@ -81,24 +85,24 @@ public class WeatherCommand extends AbstractCommand<CommandSource> implements Re
         }
 
         // Houston, we have a world! Now, what was the forecast?
-        Weather we = args.<Weather>getOne(this.weather).get();
+        Weather we = args.<Weather>getOne(weather).get();
 
         // Have we gotten an accurate forecast? Do we know how long this weather spell will go on for?
-        Optional<Long> oi = args.getOne(NucleusParameters.Keys.DURATION);
+        Optional<Long> oi = args.getOne(duration);
 
         // Even weather masters have their limits. Sometimes.
-        if (this.max > 0 && oi.orElse(Long.MAX_VALUE) > this.max && !this.permissions.testSuffix(src, "exempt.length")) {
-            throw ReturnMessageException.fromKey("command.weather.toolong", Util.getTimeStringFromSeconds(this.max));
+        if (max > 0 && oi.orElse(Long.MAX_VALUE) > max && !permissions.testSuffix(src, "exempt.length")) {
+            throw ReturnMessageException.fromKey("command.weather.toolong", Util.getTimeStringFromSeconds(max));
         }
 
         if (oi.isPresent()) {
             // YES! I should get a job at the weather service and show them how it's done!
-            w.setWeather(we, oi.get() * 20L);
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.weather.time", we.getName(), w.getName(), Util.getTimeStringFromSeconds(oi.get())));
+            w.setWeather(we, oi.get());
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.weather.time", we.getName(), w.getName(), Util.getTimeStringFromSeconds(oi.get())));
         } else {
             // No, probably because I've already gotten a job at the weather service...
             w.setWeather(we);
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.weather.set", we.getName(), w.getName()));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.weather.set", we.getName(), w.getName()));
         }
 
         // The weather control device has been activated!

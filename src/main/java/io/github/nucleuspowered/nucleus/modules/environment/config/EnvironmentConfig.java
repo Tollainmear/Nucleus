@@ -14,6 +14,6 @@ public class EnvironmentConfig {
     private long maximumWeatherTimespan = -1;
 
     public long getMaximumWeatherTimespan() {
-        return this.maximumWeatherTimespan;
+        return maximumWeatherTimespan;
     }
 }

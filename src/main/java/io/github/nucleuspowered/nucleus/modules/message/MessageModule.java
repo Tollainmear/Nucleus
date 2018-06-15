@@ -15,6 +15,7 @@ import io.github.nucleuspowered.nucleus.modules.message.commands.SocialSpyComman
 import io.github.nucleuspowered.nucleus.modules.message.config.MessageConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.message.datamodules.MessageUserDataModule;
 import io.github.nucleuspowered.nucleus.modules.message.handlers.MessageHandler;
+import org.spongepowered.api.Sponge;
 import org.spongepowered.api.text.Text;
 import uk.co.drnaylor.quickstart.annotations.ModuleData;
 
@@ -37,7 +38,7 @@ public class MessageModule extends ConfigurableModule<MessageConfigAdapter> {
             boolean socialSpy = handler.isSocialSpy(user);
             boolean msgToggle = Nucleus.getNucleus().getUserDataManager().get(user)
                     .map(y -> y.get(MessageUserDataModule.class).isMsgToggle()).orElse(true);
-            MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
+            MessageProvider mp = plugin.getMessageProvider();
             List<Text> lt = Lists.newArrayList(
                 mp.getTextMessageWithFormat("seen.socialspy",
                     mp.getMessageWithFormat("standard.yesno." + Boolean.toString(socialSpy).toLowerCase())));

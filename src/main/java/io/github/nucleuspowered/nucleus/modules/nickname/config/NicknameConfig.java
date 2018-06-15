@@ -27,18 +27,18 @@ public class NicknameConfig {
     private Pattern pattern = Pattern.compile("[a-zA-Z0-9_]+");
 
     public int getMinNicknameLength() {
-        return this.minNicknameLength;
+        return minNicknameLength;
     }
 
     public int getMaxNicknameLength() {
-        return this.maxNicknameLength;
+        return maxNicknameLength;
     }
 
     public String getPrefix() {
-        return this.prefix;
+        return prefix;
     }
 
     public Pattern getPattern() {
-        return this.pattern;
+        return pattern;
     }
 }

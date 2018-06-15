@@ -5,7 +5,6 @@
 package io.github.nucleuspowered.nucleus.modules.serverlist.commands;
 
 import com.google.common.collect.Lists;
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
@@ -49,32 +48,32 @@ public class ServerListCommand extends AbstractCommand<CommandSource> implements
     @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         // Display current information
         if (args.hasAny("m")) {
-            onMessage(src, this.slc.getMessages(), "command.serverlist.head.messages");
+            onMessage(src, slc.getMessages(), "command.serverlist.head.messages");
             return CommandResult.success();
         } else if (args.hasAny("w")) {
-            onMessage(src, this.slc.getWhitelist(), "command.serverlist.head.whitelist");
+            onMessage(src, slc.getWhitelist(), "command.serverlist.head.whitelist");
             return CommandResult.success();
         }
 
-        MessageProvider messageProvider = Nucleus.getNucleus().getMessageProvider();
+        MessageProvider messageProvider = plugin.getMessageProvider();
 
-        if (this.slc.isModifyServerList()) {
+        if (slc.isModifyServerList()) {
             src.sendMessage(messageProvider.getTextMessageWithFormat("command.serverlist.modify.true"));
-            if (!this.slc.getMessages().isEmpty()) {
+            if (!slc.getMessages().isEmpty()) {
                 src.sendMessage(
                     messageProvider.getTextMessageWithFormat("command.serverlist.messages.click")
                         .toBuilder().onClick(TextActions.runCommand("/nucleus:serverlist -m")).toText());
             }
 
-            if (!this.slc.getWhitelist().isEmpty()) {
+            if (!slc.getWhitelist().isEmpty()) {
                 src.sendMessage(
                     messageProvider.getTextMessageWithFormat("command.serverlist.whitelistmessages.click")
                         .toBuilder().onClick(TextActions.runCommand("/nucleus:serverlist -w")).toText());
             }
-        } else if (this.slc.getModifyServerList() == ServerListConfig.ServerListSelection.WHITELIST) {
+        } else if (slc.getModifyServerList() == ServerListConfig.ServerListSelection.WHITELIST) {
             src.sendMessage(messageProvider.getTextMessageWithFormat("command.serverlist.modify.whitelist"));
 
-            if (!this.slc.getWhitelist().isEmpty()) {
+            if (!slc.getWhitelist().isEmpty()) {
                 src.sendMessage(
                         messageProvider.getTextMessageWithFormat("command.serverlist.whitelistmessages.click")
                                 .toBuilder().onClick(TextActions.runCommand("/nucleus:serverlist -w")).toText());
@@ -83,7 +82,7 @@ public class ServerListCommand extends AbstractCommand<CommandSource> implements
             src.sendMessage(messageProvider.getTextMessageWithFormat("command.serverlist.modify.false"));
         }
 
-        ServerListGeneralDataModule ss = Nucleus.getNucleus().getGeneralService().get(ServerListGeneralDataModule.class);
+        ServerListGeneralDataModule ss = plugin.getGeneralService().get(ServerListGeneralDataModule.class);
         ss.getMessage().ifPresent(
                 t -> {
                     src.sendMessage(Util.SPACE);
@@ -94,9 +93,9 @@ public class ServerListCommand extends AbstractCommand<CommandSource> implements
                 }
             );
 
-        if (this.slc.isHidePlayerCount()) {
+        if (slc.isHidePlayerCount()) {
             src.sendMessage(messageProvider.getTextMessageWithFormat("command.serverlist.hideplayers"));
-        } else if (this.slc.isHideVanishedPlayers()) {
+        } else if (slc.isHideVanishedPlayers()) {
             src.sendMessage(messageProvider.getTextMessageWithFormat("command.serverlist.hidevanished"));
         }
 
@@ -118,10 +117,10 @@ public class ServerListCommand extends AbstractCommand<CommandSource> implements
         });
 
         Util.getPaginationBuilder(source).contents(m)
-                .title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat(key)).sendTo(source);
+                .title(plugin.getMessageProvider().getTextMessageWithFormat(key)).sendTo(source);
     }
 
-    @Override public void onReload() {
+    @Override public void onReload() throws Exception {
         this.slc = getServiceUnchecked(ServerListConfigAdapter.class).getNodeOrDefault();
     }
 }

@@ -44,31 +44,30 @@ public class SellCommand extends AbstractCommand<Player> {
     @Override
     public CommandResult executeCommand(final Player src, CommandContext args) throws Exception {
         // Get the item in the hand.
-        ItemStack is = src.getItemInHand(HandTypes.MAIN_HAND).orElseThrow(() -> new ReturnMessageException(
-                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.generalerror.handempty")));
+        ItemStack is = src.getItemInHand(HandTypes.MAIN_HAND).orElseThrow(() -> new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.generalerror.handempty")));
         String id;
         Optional<BlockState> blockState = is.get(Keys.ITEM_BLOCKSTATE);
         id = blockState.map(blockState1 -> blockState1.getId().toLowerCase()).orElseGet(() -> is.getType().getId());
 
-        ItemDataNode node = this.itemDataService.getDataForItem(id);
+        ItemDataNode node = itemDataService.getDataForItem(id);
         final double sellPrice = node.getServerSellPrice();
         if (sellPrice < 0) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.itemsell.notforselling"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.itemsell.notforselling"));
             return CommandResult.empty();
         }
 
         // Get the cost.
         final int amt = is.getQuantity();
         final double overallCost = sellPrice * amt;
-        if (this.econHelper.depositInPlayer(src, overallCost, false)) {
+        if (econHelper.depositInPlayer(src, overallCost, false)) {
             src.setItemInHand(HandTypes.MAIN_HAND, null);
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider()
+            src.sendMessage(plugin.getMessageProvider()
                     .getTextMessageWithTextFormat("command.itemsell.summary", Text.of(amt), Text.of(is),
-                            Text.of(this.econHelper.getCurrencySymbol(overallCost))));
+                            Text.of(econHelper.getCurrencySymbol(overallCost))));
             return CommandResult.success();
         }
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithTextFormat("command.itemsell.error", Text.of(is)));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithTextFormat("command.itemsell.error", Text.of(is)));
         return CommandResult.empty();
     }
 }

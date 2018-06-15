@@ -10,14 +10,15 @@ import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.modules.powertool.datamodules.PowertoolUserDataModule;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 @Permissions(mainOverride = "powertool")
@@ -28,22 +29,22 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @EssentialsEquivalent({"powertooltoggle", "ptt", "pttoggle"})
 public class TogglePowertoolCommand extends AbstractCommand<Player> {
 
+    private final String toggleKey = "toggle";
+
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {
-                NucleusParameters.OPTIONAL_ONE_TRUE_FALSE
-        };
+        return new CommandElement[] {GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.bool(Text.of(toggleKey))))};
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         PowertoolUserDataModule user = Nucleus.getNucleus().getUserDataManager().getUnchecked(src).get(PowertoolUserDataModule.class);
 
         // If specified - get the key. Else, the inverse of what we have now.
-        boolean toggle = args.<Boolean>getOne(NucleusParameters.Keys.BOOL).orElse(!user.isPowertoolToggled());
+        boolean toggle = args.<Boolean>getOne(toggleKey).orElse(!user.isPowertoolToggled());
         user.setPowertoolToggle(toggle);
 
-        MessageProvider mp = Nucleus.getNucleus().getMessageProvider();
+        MessageProvider mp = plugin.getMessageProvider();
         src.sendMessage(mp.getTextMessageWithFormat("command.powertool.toggle",
                 mp.getMessageWithFormat(toggle ? "standard.enabled" : "standard.disabled")));
         return CommandResult.success();

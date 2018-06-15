@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.mail.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -27,11 +26,11 @@ public class ClearMailCommand extends AbstractCommand<Player> {
     private final MailHandler handler = getServiceUnchecked(MailHandler.class);
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
-        if (this.handler.clearUserMail(src)) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.mail.clear.success"));
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
+        if (handler.clearUserMail(src)) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.mail.clear.success"));
         } else {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.mail.clear.nomail"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.mail.clear.nomail"));
         }
 
         return CommandResult.success();

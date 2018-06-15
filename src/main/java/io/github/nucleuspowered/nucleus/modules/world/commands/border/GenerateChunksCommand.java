@@ -6,11 +6,11 @@ package io.github.nucleuspowered.nucleus.modules.world.commands.border;
 
 import io.github.nucleuspowered.nucleus.NucleusPlugin;
 import io.github.nucleuspowered.nucleus.argumentparsers.BoundedIntegerArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.TimespanArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -34,6 +34,7 @@ import java.util.Map;
 @NonnullByDefault
 public class GenerateChunksCommand extends AbstractCommand<CommandSource> {
 
+    private final String worldKey = "world";
     private static final String ticksKey = "tickPercent";
     private static final String tickFrequency = "tickFrequency";
     private static final String saveTimeKey = "time between saves";
@@ -52,18 +53,19 @@ public class GenerateChunksCommand extends AbstractCommand<CommandSource> {
         return new CommandElement[] {
                 GenericArguments.flags()
                     .flag("a")
-                    .flag("r")
                     .valueFlag(new TimespanArgument(Text.of(saveTimeKey)), "-save")
                     .valueFlag(new BoundedIntegerArgument(Text.of(ticksKey), 0, 100), "t", "-tickpercent")
                     .valueFlag(new BoundedIntegerArgument(Text.of(tickFrequency), 1, 100), "f", "-frequency")
-                    .buildWith(NucleusParameters.OPTIONAL_WORLD_PROPERTIES_ENABLED_ONLY)
+                    .buildWith(
+                        GenericArguments.optional(
+                            GenericArguments.onlyOne(new NucleusWorldPropertiesArgument(Text.of(worldKey), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY))))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        WorldProperties wp = getWorldFromUserOrArgs(src, NucleusParameters.Keys.WORLD, args);
-        if (this.worldHelper.isPregenRunningForWorld(wp.getUniqueId())) {
+        WorldProperties wp = getWorldFromUserOrArgs(src, worldKey, args);
+        if (worldHelper.isPregenRunningForWorld(wp.getUniqueId())) {
             throw ReturnMessageException.fromKey("command.world.gen.alreadyrunning", wp.getWorldName());
         }
 
@@ -73,8 +75,7 @@ public class GenerateChunksCommand extends AbstractCommand<CommandSource> {
                 args.hasAny("a"),
                 args.<Long>getOne(Text.of(GenerateChunksCommand.saveTimeKey)).orElse(20L) * 1000L,
                 args.<Integer>getOne(ticksKey).orElse(null),
-                args.<Integer>getOne(tickFrequency).orElse(null),
-                args.hasAny("r"));
+                args.<Integer>getOne(tickFrequency).orElse(null));
 
         src.sendMessage(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.gen.started", wp.getWorldName()));
 

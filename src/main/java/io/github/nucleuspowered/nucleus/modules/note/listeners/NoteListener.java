@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class NoteListener implements ListenerBase.Conditional {
+public class NoteListener extends ListenerBase implements ListenerBase.Conditional {
 
     private final NoteHandler handler = getServiceUnchecked(NoteHandler.class);
 
@@ -44,23 +44,22 @@ public class NoteListener implements ListenerBase.Conditional {
     @Listener
     public void onPlayerLogin(final ClientConnectionEvent.Join event, @Getter("getTargetEntity") final Player player) {
         Sponge.getScheduler().createTaskBuilder().async().delay(500, TimeUnit.MILLISECONDS).execute(() -> {
-            List<NoteData> notes = this.handler.getNotesInternal(player);
+            List<NoteData> notes = handler.getNotesInternal(player);
             if (notes != null && !notes.isEmpty()) {
-                MutableMessageChannel messageChannel = new PermissionMessageChannel(this.showOnLogin).asMutable();
-                messageChannel.send(
-                        Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("note.login.notify", player.getName(), String.valueOf(notes.size())).toBuilder()
-                        .onHover(TextActions.showText(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("note.login.view", player.getName())))
+                MutableMessageChannel messageChannel = new PermissionMessageChannel(showOnLogin).asMutable();
+                messageChannel.send(plugin.getMessageProvider().getTextMessageWithFormat("note.login.notify", player.getName(), String.valueOf(notes.size())).toBuilder()
+                        .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("note.login.view", player.getName())))
                         .onClick(TextActions.runCommand("/checknotes " + player.getName()))
                         .build());
 
             }
-        }).submit(Nucleus.getNucleus());
+        }).submit(plugin);
     }
 
     @Override
     public Map<String, PermissionInformation> getPermissions() {
         Map<String, PermissionInformation> mp = Maps.newHashMap();
-        mp.put(this.showOnLogin, PermissionInformation.getWithTranslation("permission.note.showonlogin", SuggestedLevel.MOD));
+        mp.put(showOnLogin, PermissionInformation.getWithTranslation("permission.note.showonlogin", SuggestedLevel.MOD));
         return mp;
     }
 

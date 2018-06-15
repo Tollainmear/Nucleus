@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.note.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.argumentparsers.NoteArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
@@ -37,26 +36,26 @@ public class RemoveNoteCommand extends AbstractCommand<CommandSource> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {GenericArguments.onlyOne(new NoteArgument(Text.of(this.noteKey), this.handler))};
+        return new CommandElement[] {GenericArguments.onlyOne(new NoteArgument(Text.of(noteKey), handler))};
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        NoteArgument.Result result = args.<NoteArgument.Result>getOne(this.noteKey).get();
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        NoteArgument.Result result = args.<NoteArgument.Result>getOne(noteKey).get();
         User user = result.user;
 
-        List<NoteData> notes = this.handler.getNotesInternal(user);
+        List<NoteData> notes = handler.getNotesInternal(user);
         if (notes.isEmpty()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.checkwarnings.none", user.getName()));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.checkwarnings.none", user.getName()));
             return CommandResult.success();
         }
 
-        if (this.handler.removeNote(user, result.noteData)) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.removenote.success", user.getName()));
+        if (handler.removeNote(user, result.noteData)) {
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.removenote.success", user.getName()));
             return CommandResult.success();
         }
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.removenote.failure", user.getName()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.removenote.failure", user.getName()));
         return CommandResult.empty();
     }
 }

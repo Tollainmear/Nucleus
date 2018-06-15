@@ -13,9 +13,9 @@ import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
+import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.kit.datamodules.KitUserDataModule;
 import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
@@ -40,23 +40,26 @@ import java.util.stream.Stream;
 
 import javax.annotation.Nullable;
 
-@Permissions(prefix = "kit", suggestedLevel = SuggestedLevel.USER)
+@Permissions(prefix = "kit", suggestedLevel = SuggestedLevel.ADMIN)
 @RegisterCommand(value = {"list", "ls"}, subcommandOf = KitCommand.class, rootAliasRegister = "kits")
 @RunAsync
 @NoModifiers
 @NonnullByDefault
-public class KitListCommand extends KitFallbackBase<CommandSource> implements Reloadable {
+public class KitListCommand extends AbstractCommand<CommandSource> implements Reloadable {
+
+    private final KitHandler handler = getServiceUnchecked(KitHandler.class);
 
     private final CommandPermissionHandler kitPermissionHandler = Nucleus.getNucleus().getPermissionRegistry()
             .getPermissionsForNucleusCommand(KitCommand.class);
 
     private boolean isSeparatePermissions = false;
 
+
     @Override
-    public CommandResult executeCommand(final CommandSource src, CommandContext args) {
-        Set<String> kits = KIT_HANDLER.getKitNames();
+    public CommandResult executeCommand(final CommandSource src, CommandContext args) throws Exception {
+        Set<String> kits = handler.getKitNames();
         if (kits.isEmpty()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.empty"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.empty"));
             return CommandResult.empty();
         }
 
@@ -67,17 +70,17 @@ public class KitListCommand extends KitFallbackBase<CommandSource> implements Re
                 src instanceof Player ? Nucleus.getNucleus().getUserDataManager()
                         .getUnchecked(((Player)src).getUniqueId()).get(KitUserDataModule.class) : null;
 
-        final boolean showHidden = this.kitPermissionHandler.testSuffix(src, "showhidden");
-        Stream<String> kitStream = KIT_HANDLER.getKitNames(showHidden).stream();
+        final boolean showHidden = kitPermissionHandler.testSuffix(src, "showhidden");
+        Stream<String> kitStream = handler.getKitNames(showHidden).stream();
 
         if (this.isSeparatePermissions) {
             kitStream = kitStream.filter(kit -> src.hasPermission(KitHandler.getPermissionForKit(kit.toLowerCase())));
         }
 
-        kitStream.forEach(kit -> kitText.add(createKit(src, user, kit, KIT_HANDLER.getKit(kit).get())));
+        kitStream.forEach(kit -> kitText.add(createKit(src, user, kit, handler.getKit(kit).get())));
 
         PaginationList.Builder paginationBuilder = paginationService.builder().contents(kitText)
-                .title(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.kits")).padding(Text.of(TextColors.GREEN, "-"));
+                .title(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.kits")).padding(Text.of(TextColors.GREEN, "-"));
         paginationBuilder.sendTo(src);
 
         return CommandResult.success();
@@ -88,15 +91,15 @@ public class KitListCommand extends KitFallbackBase<CommandSource> implements Re
 
         if (user != null && Util.getKeyIgnoreCase(user.getKitLastUsedTime(), kitName).isPresent()) {
             // If one time used...
-            if (kitObj.isOneTime() && !this.kitPermissionHandler.testSuffix(source, "exempt.onetime")) {
+            if (kitObj.isOneTime() && !kitPermissionHandler.testSuffix(source, "exempt.onetime")) {
                 return tb.color(TextColors.RED)
-                        .onHover(TextActions.showText(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.onetime", kitName)))
+                        .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.onetime", kitName)))
                         .style(TextStyles.STRIKETHROUGH).build();
             }
 
             // If an intervalOld is used...
             Duration interval = kitObj.getCooldown().orElse(Duration.ZERO);
-            if (!interval.isZero() && !this.kitPermissionHandler.testCooldownExempt(source)) {
+            if (!interval.isZero() && !kitPermissionHandler.testCooldownExempt(source)) {
 
                 // Get the next time the kit can be used.
                 Instant next = Util.getValueIgnoreCase(user.getKitLastUsedTime(), kitName).get().plus(interval);
@@ -104,8 +107,7 @@ public class KitListCommand extends KitFallbackBase<CommandSource> implements Re
                     // Get the time to next usage.
                     String time = Util.getTimeToNow(next);
                     return tb.color(TextColors.RED)
-                            .onHover(TextActions.showText(
-                                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.interval", kitName, time)))
+                            .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.interval", kitName, time)))
                             .style(TextStyles.STRIKETHROUGH).build();
                 }
             }
@@ -113,19 +115,18 @@ public class KitListCommand extends KitFallbackBase<CommandSource> implements Re
 
         // Can use.
         Text.Builder builder = tb.color(TextColors.AQUA).onClick(TextActions.runCommand("/kit \"" + kitName + "\""))
-                .onHover(TextActions.showText(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.text", kitName)))
+                .onHover(TextActions.showText(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.text", kitName)))
                 .style(TextStyles.ITALIC);
-        if (kitObj.getCost() > 0 && Nucleus.getNucleus().getEconHelper().economyServiceExists() && !this.kitPermissionHandler.testCostExempt(source)) {
+        if (kitObj.getCost() > 0 && plugin.getEconHelper().economyServiceExists() && !kitPermissionHandler.testCostExempt(source)) {
             builder = Text.builder().append(builder.build())
-                .append(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.list.cost",
-                        Nucleus.getNucleus().getEconHelper().getCurrencySymbol(kitObj.getCost())));
+                .append(plugin.getMessageProvider().getTextMessageWithFormat("command.kit.list.cost", plugin.getEconHelper().getCurrencySymbol(kitObj.getCost())));
         }
 
         return builder.build();
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         this.isSeparatePermissions = getServiceUnchecked(KitConfigAdapter.class).getNodeOrDefault().isSeparatePermissions();
     }
 }

@@ -26,7 +26,7 @@ public class PermissionDoc {
     private boolean isNormal = true;
 
     public String getPermission() {
-        return this.permission;
+        return permission;
     }
 
     public PermissionDoc setPermission(String permission) {
@@ -35,7 +35,7 @@ public class PermissionDoc {
     }
 
     public String getDescription() {
-        return this.description;
+        return description;
     }
 
     public PermissionDoc setDescription(String description) {
@@ -44,7 +44,7 @@ public class PermissionDoc {
     }
 
     public String getModule() {
-        return this.module;
+        return module;
     }
 
     public PermissionDoc setModule(String module) {
@@ -53,7 +53,7 @@ public class PermissionDoc {
     }
 
     public String getDefaultLevel() {
-        return this.defaultLevel;
+        return defaultLevel;
     }
 
     public PermissionDoc setDefaultLevel(String defaultLevel) {
@@ -62,20 +62,20 @@ public class PermissionDoc {
     }
 
     public boolean isOre() {
-        return this.isOre;
+        return isOre;
     }
 
     public boolean isNormal() {
-        return this.isNormal;
+        return isNormal;
     }
 
     public PermissionDoc setOre(boolean ore) {
-        this.isOre = ore;
+        isOre = ore;
         return this;
     }
 
     public PermissionDoc setNormal(boolean normal) {
-        this.isNormal = normal;
+        isNormal = normal;
         return this;
     }
 }

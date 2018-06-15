@@ -19,7 +19,7 @@ import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 
 @NonnullByDefault
-public class CommandLoggerRunnable implements TaskBase, Reloadable {
+public class CommandLoggerRunnable extends TaskBase implements Reloadable {
 
     private final CommandLoggerHandler handler = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(CommandLoggerHandler.class);
     private CommandLoggerConfig config = new CommandLoggerConfig();
@@ -40,13 +40,13 @@ public class CommandLoggerRunnable implements TaskBase, Reloadable {
             return;
         }
 
-        if (this.config.isLogToFile()) {
-            this.handler.onTick();
+        if (config.isLogToFile()) {
+            handler.onTick();
         }
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         this.config = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(CommandLoggerConfigAdapter.class).getNodeOrDefault();
     }
 }

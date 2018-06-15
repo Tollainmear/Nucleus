@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.misc.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
@@ -22,17 +21,17 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @NonnullByDefault
 public class HealCommand extends AbstractCommand.SimpleTargetOtherPlayer {
 
-    @Override protected CommandResult executeWithPlayer(CommandSource src, Player pl, CommandContext args, boolean isSelf) {
+    @Override protected CommandResult executeWithPlayer(CommandSource src, Player pl, CommandContext args, boolean isSelf) throws Exception {
         if (pl.offer(Keys.HEALTH, pl.get(Keys.MAX_HEALTH).get()).isSuccessful()) {
             pl.offer(Keys.FIRE_TICKS, 0);
-            pl.sendMessages(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.heal.success.self"));
+            pl.sendMessages(plugin.getMessageProvider().getTextMessageWithFormat("command.heal.success.self"));
             if (!isSelf) {
-                src.sendMessages(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.heal.success.other", pl.getName()));
+                src.sendMessages(plugin.getMessageProvider().getTextMessageWithFormat("command.heal.success.other", pl.getName()));
             }
 
             return CommandResult.success();
         } else {
-            src.sendMessages(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.heal.error"));
+            src.sendMessages(plugin.getMessageProvider().getTextMessageWithFormat("command.heal.error"));
             return CommandResult.empty();
         }
     }

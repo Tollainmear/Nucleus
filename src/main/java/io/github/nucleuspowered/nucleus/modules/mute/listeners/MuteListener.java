@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.mute.listeners;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.events.NucleusMessageEvent;
 import io.github.nucleuspowered.nucleus.internal.ListenerBase;
@@ -32,7 +31,7 @@ import org.spongepowered.api.text.serializer.TextSerializers;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
-public class MuteListener implements Reloadable, ListenerBase {
+public class MuteListener extends ListenerBase implements Reloadable {
 
     private final MuteHandler handler = getServiceUnchecked(MuteHandler.class);
     private MuteConfig muteConfig = new MuteConfig();
@@ -48,18 +47,18 @@ public class MuteListener implements Reloadable, ListenerBase {
         // Kick off a scheduled task.
         Sponge.getScheduler().createTaskBuilder().async().delay(500, TimeUnit.MILLISECONDS).execute(() -> {
             Player user = event.getTargetEntity();
-            Optional<MuteData> omd = this.handler.getPlayerMuteData(user);
+            Optional<MuteData> omd = handler.getPlayerMuteData(user);
             if (omd.isPresent()) {
                 MuteData md = omd.get();
                 md.nextLoginToTimestamp();
 
-                omd = Util.testForEndTimestamp(this.handler.getPlayerMuteData(user), () -> this.handler.unmutePlayer(user));
+                omd = Util.testForEndTimestamp(handler.getPlayerMuteData(user), () -> handler.unmutePlayer(user));
                 if (omd.isPresent()) {
                     md = omd.get();
                     this.handler.onMute(md, event.getTargetEntity());
                 }
             }
-        }).submit(Nucleus.getNucleus());
+        }).submit(plugin);
     }
 
     @Listener(order = Order.LATE)
@@ -69,11 +68,10 @@ public class MuteListener implements Reloadable, ListenerBase {
 
     private void onChat(MessageChannelEvent.Chat event, Player player) {
         boolean cancel = false;
-        Optional<MuteData> omd = Util.testForEndTimestamp(this.handler.getPlayerMuteData(player), () -> this.handler.unmutePlayer(player));
+        Optional<MuteData> omd = Util.testForEndTimestamp(handler.getPlayerMuteData(player), () -> handler.unmutePlayer(player));
         if (omd.isPresent()) {
             this.handler.onMute(omd.get(), player);
-            MessageChannel.TO_CONSOLE.send(Text.builder().append(Text.of(player.getName() + " (")).append(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("standard.muted"))
+            MessageChannel.TO_CONSOLE.send(Text.builder().append(Text.of(player.getName() + " (")).append(plugin.getMessageProvider().getTextMessageWithFormat("standard.muted"))
                     .append(Text.of("): ")).append(event.getRawMessage()).build());
             cancel = true;
         }
@@ -106,7 +104,7 @@ public class MuteListener implements Reloadable, ListenerBase {
 
         boolean isCancelled = false;
         Player user = (Player)event.getSender();
-        Optional<MuteData> omd = Util.testForEndTimestamp(this.handler.getPlayerMuteData(user), () -> this.handler.unmutePlayer(user));
+        Optional<MuteData> omd = Util.testForEndTimestamp(handler.getPlayerMuteData(user), () -> handler.unmutePlayer(user));
         if (omd.isPresent()) {
             if (user.isOnline()) {
                 this.handler.onMute(omd.get(), user.getPlayer().get());
@@ -124,7 +122,7 @@ public class MuteListener implements Reloadable, ListenerBase {
 
     @Listener
     public void onPlayerHelpOp(InternalNucleusHelpOpEvent event, @Root Player user) {
-        Optional<MuteData> omd = Util.testForEndTimestamp(this.handler.getPlayerMuteData(user), () -> this.handler.unmutePlayer(user));
+        Optional<MuteData> omd = Util.testForEndTimestamp(handler.getPlayerMuteData(user), () -> handler.unmutePlayer(user));
         omd.ifPresent(muteData -> {
             if (user.isOnline()) {
                 this.handler.onMute(muteData, user.getPlayer().get());
@@ -133,27 +131,26 @@ public class MuteListener implements Reloadable, ListenerBase {
             event.setCancelled(true);
         });
 
-        //noinspection IsCancelled
         if (cancelOnGlobalMute(user, event.isCancelled())) {
             event.setCancelled(true);
         }
     }
 
     private boolean cancelOnGlobalMute(Player player, boolean isCancelled) {
-        if (isCancelled || !this.handler.isGlobalMuteEnabled() || player.hasPermission(this.voicePerm)) {
+        if (isCancelled || !handler.isGlobalMuteEnabled() || player.hasPermission(this.voicePerm)) {
             return false;
         }
 
-        if (this.handler.isVoiced(player.getUniqueId())) {
+        if (handler.isVoiced(player.getUniqueId())) {
             return false;
         }
 
-        player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("globalmute.novoice"));
+        player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("globalmute.novoice"));
         return true;
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         this.muteConfig = getServiceUnchecked(MuteConfigAdapter.class).getNodeOrDefault();
     }
 }

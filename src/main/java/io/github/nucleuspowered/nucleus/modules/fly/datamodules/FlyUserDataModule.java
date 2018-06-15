@@ -20,11 +20,11 @@ public class FlyUserDataModule extends DataModule.ReferenceService<ModularUserSe
 
     public boolean isFlying() {
         getService().getPlayer().ifPresent(player -> this.fly = player.get(Keys.CAN_FLY).orElse(false));
-        return this.fly;
+        return fly;
     }
 
     public boolean isFlyingSafe() {
-        return this.fly;
+        return fly;
     }
 
     public void setFlying(boolean fly) {

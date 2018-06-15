@@ -4,12 +4,10 @@
  */
 package io.github.nucleuspowered.nucleus.modules.kick.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -20,6 +18,7 @@ import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
 import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.serializer.TextSerializers;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -35,13 +34,14 @@ import java.util.stream.Collectors;
 @EssentialsEquivalent("kickall")
 public class KickAllCommand extends AbstractCommand<CommandSource> {
 
+    private final String reason = "reason";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                GenericArguments.flags()
-                        .permissionFlag(this.permissions.getPermissionWithSuffix("whitelist"), "w", "f")
-                        .buildWith(NucleusParameters.OPTIONAL_REASON)
-        };
+                GenericArguments.requiringPermission(GenericArguments.flags().flag("w", "f").buildWith(GenericArguments.none()),
+                        permissions.getPermissionWithSuffix("whitelist")),
+                GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(reason))))};
     }
 
     @Override
@@ -52,10 +52,9 @@ public class KickAllCommand extends AbstractCommand<CommandSource> {
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        String r = args.<String>getOne(NucleusParameters.Keys.REASON)
-                .orElseGet(() -> Nucleus.getNucleus().getMessageProvider().getMessageWithFormat("command.kick.defaultreason"));
-        boolean f = args.<Boolean>getOne("w").orElse(false);
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        String r = args.<String>getOne(reason).orElse(plugin.getMessageProvider().getMessageWithFormat("command.kick.defaultreason"));
+        Boolean f = args.<Boolean>getOne("w").orElse(false);
 
         if (f) {
             Sponge.getServer().setHasWhitelist(true);
@@ -68,10 +67,10 @@ public class KickAllCommand extends AbstractCommand<CommandSource> {
                 .forEach(x -> x.kick(TextSerializers.FORMATTING_CODE.deserialize(r)));
 
         MessageChannel mc = MessageChannel.fixed(Sponge.getServer().getConsole(), src);
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kickall.message"));
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reason", r));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("command.kickall.message"));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("command.reason", r));
         if (f) {
-            mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kickall.whitelist"));
+            mc.send(plugin.getMessageProvider().getTextMessageWithFormat("command.kickall.whitelist"));
         }
 
         return CommandResult.success();

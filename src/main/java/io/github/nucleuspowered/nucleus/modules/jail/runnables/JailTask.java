@@ -18,7 +18,7 @@ import java.util.Collection;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("ALL")
-public class JailTask implements TaskBase {
+public class JailTask extends TaskBase {
 
     private JailHandler jailHandler = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(JailHandler.class);
 

@@ -10,25 +10,27 @@ import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.exceptions.KitRedeemException;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.Kit;
 import io.github.nucleuspowered.nucleus.api.service.NucleusKitService;
+import io.github.nucleuspowered.nucleus.argumentparsers.KitArgument;
 import io.github.nucleuspowered.nucleus.internal.EconHelper;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoCooldown;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoCost;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
+import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
+import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
 import org.spongepowered.api.command.CommandResult;
-import org.spongepowered.api.command.CommandSource;
-import org.spongepowered.api.command.args.CommandArgs;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.Map;
@@ -36,26 +38,25 @@ import java.util.Map;
 /**
  * Allows a user to redeem a kit.
  */
-@Permissions(suggestedLevel = SuggestedLevel.USER)
+@Permissions(suggestedLevel = SuggestedLevel.ADMIN)
 @RegisterCommand("kit")
 @NoCooldown // This is determined by the kit itself.
 @NoCost // This is determined by the kit itself.
 @NonnullByDefault
 @EssentialsEquivalent(value = "kit, kits", isExact = false, notes = "'/kit' redeems, '/kits' lists.")
-public class KitCommand extends KitFallbackBase<Player> implements Reloadable {
+public class KitCommand extends AbstractCommand<Player> implements Reloadable {
+
+    private final String kitKey = "kit";
+
+    private final KitHandler handler = getServiceUnchecked(KitHandler.class);
 
     private boolean isDrop;
     private boolean mustGetAll;
 
     @Override
-    protected boolean allowFallback(CommandSource source, CommandArgs args, CommandContext context) {
-        return true;
-    }
-
-    @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                KitFallbackBase.KIT_PARAMETER_PERM_CHECK
+            GenericArguments.onlyOne(new KitArgument(Text.of(kitKey), true))
         };
     }
 
@@ -78,11 +79,11 @@ public class KitCommand extends KitFallbackBase<Player> implements Reloadable {
 
     @Override
     public CommandResult executeCommand(Player player, CommandContext args) throws ReturnMessageException {
-        Kit kit = args.<Kit>getOne(KIT_PARAMETER_KEY).get();
+        Kit kit = args.<Kit>getOne(this.kitKey).get();
 
         EconHelper econHelper = Nucleus.getNucleus().getEconHelper();
         double cost = econHelper.economyServiceExists() ? kit.getCost() : 0;
-        if (this.permissions.testCostExempt(player)) {
+        if (permissions.testCostExempt(player)) {
             // If exempt - no cost.
             cost = 0;
         }
@@ -94,19 +95,19 @@ public class KitCommand extends KitFallbackBase<Player> implements Reloadable {
 
         try {
             NucleusKitService.RedeemResult redeemResult =
-                    KIT_HANDLER.redeemKit(kit, player, true, this.mustGetAll);
+                    this.handler.redeemKit(kit, player, true, this.mustGetAll);
             if (!redeemResult.rejected().isEmpty()) {
                 // If we drop them, tell the user
                 if (this.isDrop) {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.itemsdropped"));
+                    player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.kit.itemsdropped"));
                     redeemResult.rejected().forEach(x -> Util.dropItemOnFloorAtLocation(x, player.getLocation()));
                 } else {
-                    player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.fullinventory"));
+                    player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.kit.fullinventory"));
                 }
             }
 
             if (kit.isDisplayMessageOnRedeem()) {
-                player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kit.spawned", kit.getName()));
+                player.sendMessage(this.plugin.getMessageProvider().getTextMessageWithFormat("command.kit.spawned", kit.getName()));
             }
 
             // Charge, if necessary
@@ -139,7 +140,7 @@ public class KitCommand extends KitFallbackBase<Player> implements Reloadable {
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         KitConfigAdapter kca = getServiceUnchecked(KitConfigAdapter.class);
         this.isDrop = kca.getNodeOrDefault().isDropKitIfFull();
         this.mustGetAll = kca.getNodeOrDefault().isMustGetAll();

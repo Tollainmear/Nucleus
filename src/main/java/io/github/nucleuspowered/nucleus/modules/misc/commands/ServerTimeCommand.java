@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.misc.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -28,9 +27,9 @@ public class ServerTimeCommand extends AbstractCommand<CommandSource> {
 
     private static DateTimeFormatter dtf = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM);
 
-    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) {
+    @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         src.sendMessage(
-            Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.servertime.time", dtf.format(LocalDateTime.now()))
+            this.plugin.getMessageProvider().getTextMessageWithFormat("command.servertime.time", dtf.format(LocalDateTime.now()))
         );
 
         return CommandResult.success();

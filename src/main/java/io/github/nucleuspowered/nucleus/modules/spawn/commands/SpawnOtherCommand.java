@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.spawn.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
@@ -74,16 +73,15 @@ public class SpawnOtherCommand extends AbstractCommand<CommandSource> implements
         WorldProperties world = this.getWorldProperties(src, worldKey, args)
             .orElseGet(() -> gsc.isOnSpawnCommand() ? gsc.getWorld().get() : Sponge.getServer().getDefaultWorld().get());
 
-        Transform<World> worldTransform = SpawnHelper.getSpawn(world, target.getPlayer().orElse(null));
+        Transform<World> worldTransform = SpawnHelper.getSpawn(world, plugin, target.getPlayer().orElse(null));
 
         SendToSpawnEvent event = new SendToSpawnEvent(worldTransform, target, CauseStackHelper.createCause(src));
         if (Sponge.getEventManager().post(event)) {
             if (event.getCancelReason().isPresent()) {
-                throw new ReturnMessageException(Nucleus
-                        .getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.other.failed.reason", target.getName(), event.getCancelReason().get()));
+                throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.other.failed.reason", target.getName(), event.getCancelReason().get()));
             }
 
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.other.failed.noreason", target.getName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.other.failed.noreason", target.getName()));
         }
 
         if (!target.isOnline()) {
@@ -92,10 +90,10 @@ public class SpawnOtherCommand extends AbstractCommand<CommandSource> implements
 
         // If we don't have a rotation, then use the current rotation
         Player player = target.getPlayer().get();
-        NucleusTeleportHandler.TeleportResult result = Nucleus.getNucleus().getTeleportHandler().teleportPlayer(player, worldTransform, this.safeTeleport);
+        NucleusTeleportHandler.TeleportResult result = plugin.getTeleportHandler().teleportPlayer(player, worldTransform, this.safeTeleport);
         if (result.isSuccess()) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.success.source", target.getName(), world.getWorldName()));
-            player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.success.target", world.getWorldName()));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.success.source", target.getName(), world.getWorldName()));
+            player.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.success.target", world.getWorldName()));
             return CommandResult.success();
         }
 
@@ -104,11 +102,11 @@ public class SpawnOtherCommand extends AbstractCommand<CommandSource> implements
 
     private CommandResult isOffline(CommandSource source, User user, Transform<World> worldTransform) throws Exception {
         if (!permissions.testSuffix(source, "offline")) {
-            throw new ReturnMessageException(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.offline.permission"));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.offline.permission"));
         }
 
-        Nucleus.getNucleus().getUserDataManager().get(user).get().get(CoreUserDataModule.class).sendToLocationOnLogin(worldTransform.getLocation());
-        source.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.spawnother.offline.sendonlogin", user.getName(), worldTransform.getExtent().getName()));
+        plugin.getUserDataManager().get(user).get().get(CoreUserDataModule.class).sendToLocationOnLogin(worldTransform.getLocation());
+        source.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.spawnother.offline.sendonlogin", user.getName(), worldTransform.getExtent().getName()));
         return CommandResult.success();
     }
 }

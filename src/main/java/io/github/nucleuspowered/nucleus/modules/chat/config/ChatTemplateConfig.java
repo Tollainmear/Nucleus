@@ -25,33 +25,33 @@ public class ChatTemplateConfig {
     private String namestyle = "";
 
     @Setting(comment = "config.chat.template.prefix")
-    @Default(value = "{{prefix:s}}{{displayname}}{{suffix}}&f: ", saveDefaultIfNull = true)
+    @Default(value = "{{prefix}} {{displayname}}{{suffix}}&f: ", saveDefaultIfNull = true)
     private NucleusTextTemplateImpl prefix;
 
     @Setting(comment = "config.chat.template.suffix")
     private NucleusTextTemplateImpl suffix = NucleusTextTemplateImpl.Empty.INSTANCE;
 
     public NucleusTextTemplateImpl getPrefix() {
-        return this.prefix;
+        return prefix;
     }
 
     public NucleusTextTemplateImpl getSuffix() {
-        return this.suffix;
+        return suffix;
     }
 
     public String getChatcolour() {
-        return this.chatcolour;
+        return chatcolour;
     }
 
     public String getChatstyle() {
-        return this.chatstyle;
+        return chatstyle;
     }
 
     public String getNamecolour() {
-        return this.namecolour;
+        return namecolour;
     }
 
     public String getNamestyle() {
-        return this.namestyle;
+        return namestyle;
     }
 }

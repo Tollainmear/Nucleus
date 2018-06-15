@@ -33,22 +33,22 @@ public class MessagesConfig {
     private NucleusTextTemplateImpl kickMessage;
 
     public NucleusTextTemplateImpl getAfkMessage() {
-        return this.afkMessage;
+        return afkMessage;
     }
 
     public NucleusTextTemplateImpl getReturnAfkMessage() {
-        return this.returnAfkMessage;
+        return returnAfkMessage;
     }
 
     public NucleusTextTemplateImpl getOnCommand() {
-        return this.onCommand;
+        return onCommand;
     }
 
     public NucleusTextTemplateImpl getOnKick() {
-        return this.onKick;
+        return onKick;
     }
 
     public NucleusTextTemplateImpl getKickMessage() {
-        return this.kickMessage;
+        return kickMessage;
     }
 }

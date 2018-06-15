@@ -9,7 +9,6 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.internal.data.EndTimestamp;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
-import io.github.nucleuspowered.nucleus.internal.services.InventoryReorderService;
 import io.github.nucleuspowered.nucleus.util.Action;
 import io.github.nucleuspowered.nucleus.util.PaginationBuilderWrapper;
 import io.github.nucleuspowered.nucleus.util.ThrownFunction;
@@ -35,6 +34,7 @@ import org.spongepowered.api.item.inventory.ItemStack;
 import org.spongepowered.api.item.inventory.ItemStackSnapshot;
 import org.spongepowered.api.item.inventory.entity.MainPlayerInventory;
 import org.spongepowered.api.item.inventory.property.InventoryDimension;
+import org.spongepowered.api.item.inventory.query.QueryOperation;
 import org.spongepowered.api.item.inventory.query.QueryOperationTypes;
 import org.spongepowered.api.profile.GameProfile;
 import org.spongepowered.api.service.context.Context;
@@ -314,7 +314,7 @@ public class Util {
     public static Optional<CatalogType> getCatalogTypeForItemFromId(String id) {
         // Check for ItemType.
         Optional<CatalogType> oit = Sponge.getRegistry().getAllOf(ItemType.class).stream().filter(x -> x.getId().equalsIgnoreCase(id))
-                .findFirst().map(x -> x);
+                .findFirst().map(x -> (CatalogType)x);
         return oit.map(Optional::of)
                 .orElseGet(() -> Sponge.getRegistry().getAllOf(BlockState.class).stream().filter(x -> x.getId().equalsIgnoreCase(id)).findFirst()
                         .map(x -> (CatalogType) x));
@@ -507,9 +507,7 @@ public class Util {
     }
 
     public static Inventory getStandardInventory(Carrier player) {
-        // TODO: Change for API 7.1
-        return Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(InventoryReorderService.class)
-            .getOrderedInventory(player.getInventory().query(QueryOperationTypes.INVENTORY_TYPE.of(MainPlayerInventory.class)));
+        return player.getInventory().query(QueryOperationTypes.INVENTORY_TYPE.of(MainPlayerInventory.class));
     }
 
     public static <T extends Event> void onPlayerSimulatedOrPlayer(T event, BiConsumer<T, Player> eventConsumer) {

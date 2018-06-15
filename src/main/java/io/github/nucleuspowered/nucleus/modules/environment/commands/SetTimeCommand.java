@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.environment.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.argumentparsers.WorldTimeArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -20,6 +19,7 @@ import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 import org.spongepowered.api.world.storage.WorldProperties;
 
+import java.util.function.IntFunction;
 import java.util.function.LongFunction;
 
 @Permissions(prefix = "time")
@@ -33,19 +33,19 @@ public class SetTimeCommand extends AbstractCommand<CommandSource> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.optionalWeak(GenericArguments.onlyOne(GenericArguments.world(Text.of(this.world)))),
-            GenericArguments.onlyOne(new WorldTimeArgument(Text.of(this.time)))
+            GenericArguments.optionalWeak(GenericArguments.onlyOne(GenericArguments.world(Text.of(world)))),
+            GenericArguments.onlyOne(new WorldTimeArgument(Text.of(time)))
         };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        WorldProperties pr = getWorldPropertiesOrDefault(src, this.world, args);
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        WorldProperties pr = getWorldPropertiesOrDefault(src, world, args);
 
-        LongFunction<Long> tick = args.<LongFunction<Long>>getOne(this.time).get();
+        LongFunction<Long> tick = args.<LongFunction<Long>>getOne(time).get();
         long time = tick.apply(pr.getWorldTime());
         pr.setWorldTime(time);
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.settime.done2",
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.settime.done2",
                 pr.getWorldName(),
                 String.valueOf(Util.getTimeFromTicks(time))));
         return CommandResult.success();

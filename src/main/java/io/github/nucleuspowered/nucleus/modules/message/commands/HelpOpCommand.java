@@ -4,18 +4,16 @@
  */
 package io.github.nucleuspowered.nucleus.modules.message.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
-import io.github.nucleuspowered.nucleus.internal.text.NucleusTextTemplateImpl;
 import io.github.nucleuspowered.nucleus.internal.text.TextParsingUtils;
+import io.github.nucleuspowered.nucleus.modules.message.config.MessageConfig;
 import io.github.nucleuspowered.nucleus.modules.message.config.MessageConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.message.events.InternalNucleusHelpOpEvent;
 import io.github.nucleuspowered.nucleus.util.PermissionMessageChannel;
@@ -23,14 +21,13 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.HashMap;
 import java.util.Map;
-
-import javax.annotation.Nullable;
 
 @RunAsync
 @Permissions(suggestedLevel = SuggestedLevel.USER)
@@ -39,12 +36,14 @@ import javax.annotation.Nullable;
 @NonnullByDefault
 public class HelpOpCommand extends AbstractCommand<Player> implements Reloadable {
 
-    @Nullable private NucleusTextTemplateImpl prefix = null;
+    private final String messageKey = "message";
+
+    private MessageConfig messageConfig = new MessageConfig();
 
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.MESSAGE
+                GenericArguments.remainingJoinedStrings(Text.of(messageKey))
         };
     }
 
@@ -56,27 +55,27 @@ public class HelpOpCommand extends AbstractCommand<Player> implements Reloadable
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
-        String message = args.<String>getOne(NucleusParameters.Keys.MESSAGE).get();
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
+        String message = args.<String>getOne(messageKey).get();
 
         // Message is about to be sent. Send the event out. If canceled, then
         // that's that.
         if (Sponge.getEventManager().post(new InternalNucleusHelpOpEvent(src, message))) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("message.cancel"));
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("message.cancel"));
             return CommandResult.empty();
         }
 
-        Text prefix = this.prefix == null ? Text.EMPTY : this.prefix.getForCommandSource(src);
+        Text prefix = messageConfig.getHelpOpPrefix().getForCommandSource(src);
 
-        new PermissionMessageChannel(this.permissions.getPermissionWithSuffix("receive"))
+        new PermissionMessageChannel(permissions.getPermissionWithSuffix("receive"))
                 .send(src, TextParsingUtils.joinTextsWithColoursFlowing(prefix, Text.of(message)));
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.helpop.success"));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.helpop.success"));
 
         return CommandResult.success();
     }
 
     @Override public void onReload() {
-        this.prefix = getServiceUnchecked(MessageConfigAdapter.class).getNodeOrDefault().getHelpOpPrefix();
+        messageConfig = getServiceUnchecked(MessageConfigAdapter.class).getNodeOrDefault();
     }
 }

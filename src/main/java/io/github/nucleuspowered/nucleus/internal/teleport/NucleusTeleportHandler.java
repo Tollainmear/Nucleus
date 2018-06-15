@@ -277,7 +277,7 @@ public class NucleusTeleportHandler {
          */
         WALL_CHECK_ASCENDING {
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
-                Location<World> locationToCheck = setValidY(location);
+                Location<World> locationToCheck = location;
                 int y = location.getExtent().getBlockMax().getY() - 1;
                 while (locationToCheck.getBlockY() < y) {
                     Optional<Location<World>> olw = WALL_CHECK.apply(player, locationToCheck);
@@ -300,11 +300,11 @@ public class NucleusTeleportHandler {
             private CoreConfigAdapter coreConfigAdapter = null;
 
             private CoreConfigAdapter getCoreConfigAdapter() throws Exception {
-                if (this.coreConfigAdapter == null) {
-                    this.coreConfigAdapter = Nucleus.getNucleus().getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
+                if (coreConfigAdapter == null) {
+                    coreConfigAdapter = Nucleus.getNucleus().getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
                 }
 
-                return this.coreConfigAdapter;
+                return coreConfigAdapter;
             }
 
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
@@ -315,7 +315,7 @@ public class NucleusTeleportHandler {
                     stc = new SafeTeleportConfig();
                 }
 
-                Optional<Location<World>> olw = TELEPORT_HELPER.getSafeLocation(setValidY(location), stc.getHeight(), stc.getWidth());
+                Optional<Location<World>> olw = TELEPORT_HELPER.getSafeLocation(location, stc.getHeight(), stc.getWidth());
                 if (olw.isPresent()) {
                     Location<World> lw = olw.get();
                     if (!lw.getExtent().getBlock(lw.getBlockPosition()).getProperty(PassableProperty.class)
@@ -343,7 +343,7 @@ public class NucleusTeleportHandler {
                             TeleportHelperFilters.FLYING);
                 }
 
-                return SAFE_TELEPORT_SURFACE.apply(player, setValidY(location));
+                return SAFE_TELEPORT_SURFACE.apply(player, location);
             }
         },
 
@@ -355,11 +355,11 @@ public class NucleusTeleportHandler {
             private CoreConfigAdapter coreConfigAdapter = null;
 
             private CoreConfigAdapter getCoreConfigAdapter() throws Exception {
-                if (this.coreConfigAdapter == null) {
-                    this.coreConfigAdapter = Nucleus.getNucleus().getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
+                if (coreConfigAdapter == null) {
+                    coreConfigAdapter = Nucleus.getNucleus().getModuleContainer().getConfigAdapterForModule("core", CoreConfigAdapter.class);
                 }
 
-                return this.coreConfigAdapter;
+                return coreConfigAdapter;
             }
 
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
@@ -370,7 +370,7 @@ public class NucleusTeleportHandler {
                     stc = new SafeTeleportConfig();
                 }
 
-                return TELEPORT_HELPER.getSafeLocationWithBlacklist(setValidY(location), stc.getHeight(), stc.getWidth(),
+                return TELEPORT_HELPER.getSafeLocationWithBlacklist(location, stc.getHeight(), stc.getWidth(),
                         TeleportHelper.DEFAULT_FLOOR_CHECK_DISTANCE,
                         TeleportHelperFilters.SURFACE_ONLY);
             }
@@ -381,7 +381,7 @@ public class NucleusTeleportHandler {
          */
         SAFE_TELEPORT_CHUNK {
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
-                return TELEPORT_HELPER.getSafeLocation(setValidY(location), 8, 8);
+                return TELEPORT_HELPER.getSafeLocation(location, 8, 8);
             }
         },
 
@@ -391,8 +391,7 @@ public class NucleusTeleportHandler {
         SAFE_TELEPORT_ASCENDING {
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
                 return StandardTeleportMode
-                        .teleportCheck(player, location, (l, h) -> l.add(0, h, 0), i -> i < setValidY(location).getExtent().getBlockMax
-                                ().getY() - 1);
+                        .teleportCheck(player, location, (l, h) -> l.add(0, h, 0), i -> i < location.getExtent().getBlockMax().getY() - 1);
             }
         },
 
@@ -401,7 +400,7 @@ public class NucleusTeleportHandler {
          */
         SAFE_TELEPORT_DESCEND {
             @Override public Optional<Location<World>> apply(Player player, Location<World> location) {
-                return StandardTeleportMode.teleportCheck(player, setValidY(location), (l, h) -> l.sub(0, h, 0), i -> i > 1);
+                return StandardTeleportMode.teleportCheck(player, location, (l, h) -> l.sub(0, h, 0), i -> i > 1);
             }
         };
 
@@ -423,7 +422,7 @@ public class NucleusTeleportHandler {
             BiFunction<Location<World>, Integer, Location<World>> locationTransformFunction,
             Predicate<Integer> blockWhileLoop) {
 
-            Location<World> locationToCheck = setValidY(location);
+            Location<World> locationToCheck = location;
             int height;
             try {
                 height = getCoreConfigAdapter().getNodeOrDefault().getSafeTeleportConfig().getHeight();
@@ -442,15 +441,6 @@ public class NucleusTeleportHandler {
             }
 
             return Optional.empty();
-        }
-
-        protected static Location<World> setValidY(Location<World> location) {
-            int maxy = location.getExtent().getBlockMax().getY();
-            if (location.getBlockY() > maxy) {
-                return new Location<>(location.getExtent(), location.getX(), maxy, location.getZ());
-            }
-
-            return location;
         }
     }
 
@@ -481,7 +471,7 @@ public class NucleusTeleportHandler {
         }
 
         public boolean isSuccess() {
-            return this.b;
+            return b;
         }
     }
 }

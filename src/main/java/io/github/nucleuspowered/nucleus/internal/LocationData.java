@@ -31,41 +31,41 @@ public class LocationData implements NamedLocation {
         this.position = position;
         this.warpName = name;
         this.worldUUID = world;
-        this.worldProperties = Sponge.getServer().getWorldProperties(this.worldUUID).orElse(null);
+        this.worldProperties = Sponge.getServer().getWorldProperties(worldUUID).orElse(null);
     }
 
     public String getName() {
-        return this.warpName;
+        return warpName;
     }
 
     @Override public Optional<WorldProperties> getWorldProperties() {
-        return Optional.ofNullable(this.worldProperties);
+        return Optional.ofNullable(worldProperties);
     }
 
     public Vector3d getRotation() {
-        return this.rotation;
+        return rotation;
     }
 
     @Override public Vector3d getPosition() {
-        return this.position;
+        return position;
     }
 
     @Override public Optional<Location<World>> getLocation() {
-        Optional<World> optional = Sponge.getServer().getWorld(this.worldUUID);
-        return optional.map(world -> new Location<>(world, this.position));
+        Optional<World> optional = Sponge.getServer().getWorld(worldUUID);
+        return optional.map(world -> new Location<>(world, position));
     }
 
     @Override public Optional<Transform<World>> getTransform() {
         Optional<Location<World>> olw = getLocation();
-        return olw.map(worldLocation -> new Transform<>(worldLocation.getExtent(), this.position, this.rotation));
+        return olw.map(worldLocation -> new Transform<>(worldLocation.getExtent(), position, rotation));
     }
 
     public String toLocationString() {
-        if (this.worldProperties == null) {
-            return MessageFormat.format("name: {0}, no location", this.warpName);
+        if (worldProperties == null) {
+            return MessageFormat.format("name: {0}, no location", warpName);
         }
 
-        return MessageFormat.format("name: {0}, world: {1}, x: {2}, y: {3}, z: {4}", this.warpName, this.worldProperties.getWorldName(),
-            (int) this.position.getX(), (int) this.position.getY(), (int) this.position.getZ());
+        return MessageFormat.format("name: {0}, world: {1}, x: {2}, y: {3}, z: {4}", warpName, worldProperties.getWorldName(),
+            (int)position.getX(), (int)position.getY(), (int)position.getZ());
     }
 }

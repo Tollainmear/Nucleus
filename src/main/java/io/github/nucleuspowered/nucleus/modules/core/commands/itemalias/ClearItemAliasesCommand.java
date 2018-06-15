@@ -35,19 +35,19 @@ public class ClearItemAliasesCommand extends AbstractCommand<CommandSource> {
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            GenericArguments.onlyOne(new ItemAliasArgument(Text.of(this.item)))
+            GenericArguments.onlyOne(new ItemAliasArgument(Text.of(item)))
         };
     }
 
     @Override
-    public CommandResult executeCommand(CommandSource src, CommandContext args) {
-        CatalogType al = args.<CatalogType>getOne(this.item).get();
+    public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
+        CatalogType al = args.<CatalogType>getOne(item).get();
         String id = al.getId().toLowerCase();
-        ItemDataNode node = this.itemDataService.getDataForItem(id);
+        ItemDataNode node = itemDataService.getDataForItem(id);
         node.clearAliases();
-        this.itemDataService.setDataForItem(id, node);
+        itemDataService.setDataForItem(id, node);
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.nucleus.removeitemalias.cleared", id));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.nucleus.removeitemalias.cleared", id));
         return CommandResult.success();
     }
 }

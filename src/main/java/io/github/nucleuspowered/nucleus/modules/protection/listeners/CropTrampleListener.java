@@ -18,7 +18,7 @@ import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.block.ChangeBlockEvent;
 import org.spongepowered.api.event.filter.cause.Root;
 
-public class CropTrampleListener implements Reloadable, ListenerBase.Conditional {
+public class CropTrampleListener extends ListenerBase implements Reloadable, ListenerBase.Conditional {
 
     private boolean cropentity = false;
     private boolean cropplayer = false;
@@ -28,7 +28,7 @@ public class CropTrampleListener implements Reloadable, ListenerBase.Conditional
     public void onBlockChange(ChangeBlockEvent.Place breakEvent, @Root Entity entity) {
         // If player or entity and the corresponding option is added
         boolean isPlayer = entity instanceof Player;
-        if (this.cropplayer && isPlayer || this.cropentity && !isPlayer) {
+        if (cropplayer && isPlayer || cropentity && !isPlayer) {
             // Go from Farmland to Dirt.
             breakEvent.getTransactions().stream()
                     .filter(Transaction::isValid)
@@ -39,10 +39,10 @@ public class CropTrampleListener implements Reloadable, ListenerBase.Conditional
     }
 
     @Override
-    public void onReload() {
+    public void onReload() throws Exception {
         ProtectionConfigAdapter protectionConfigAdapter = getServiceUnchecked(ProtectionConfigAdapter.class);
-        this.cropentity = protectionConfigAdapter.getNodeOrDefault().isDisableMobCropTrample();
-        this.cropplayer = protectionConfigAdapter.getNodeOrDefault().isDisablePlayerCropTrample();
+        cropentity = protectionConfigAdapter.getNodeOrDefault().isDisableMobCropTrample();
+        cropplayer = protectionConfigAdapter.getNodeOrDefault().isDisablePlayerCropTrample();
     }
 
     @Override public boolean shouldEnable() {

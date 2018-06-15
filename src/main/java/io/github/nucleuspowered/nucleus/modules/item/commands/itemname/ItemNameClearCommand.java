@@ -22,7 +22,7 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 import java.util.Optional;
 
 @Permissions(prefix = "itemname")
-@RegisterCommand(value = "clear", subcommandOf = ItemNameCommand.class, rootAliasRegister = { "clearitemname", "resetitemname" })
+@RegisterCommand(value = "clear", subcommandOf = ItemNameCommand.class)
 @NonnullByDefault
 public class ItemNameClearCommand extends AbstractCommand<Player> {
 

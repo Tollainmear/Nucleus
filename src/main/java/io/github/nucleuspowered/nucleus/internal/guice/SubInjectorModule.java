@@ -15,16 +15,16 @@ public class SubInjectorModule extends AbstractModule {
     private final List<TypeHolder> t = Lists.newArrayList();
 
     public <T> void addInjection(Class<T> clazz, T toInject) {
-        this.t.add(new TypeHolder(clazz, toInject));
+        t.add(new TypeHolder(clazz, toInject));
     }
 
     public boolean isEmpty() {
-        return this.t.isEmpty();
+        return t.isEmpty();
     }
 
     @Override
     protected void configure() {
-        this.t.forEach(k -> bind(k.clazz).toInstance(k.clazz.cast(k.instance)));
+        t.forEach(k -> bind(k.clazz).toInstance(k.clazz.cast(k.instance)));
     }
 
     private class TypeHolder<T> {

@@ -4,13 +4,11 @@
  */
 package io.github.nucleuspowered.nucleus.modules.world.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.argumentparsers.NucleusWorldPropertiesArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -38,32 +36,32 @@ import java.util.stream.Collectors;
 public class UnloadWorldCommand extends AbstractCommand<CommandSource> {
 
     private final String transferWorldKey = "transferWorld";
+    private final String worldKey = "world";
 
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
             GenericArguments.flags()
-                .permissionFlag(Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(DisableWorldCommand.class).getBase(), "d", "-disable")
-                .valueFlag(new NucleusWorldPropertiesArgument(Text.of(this.transferWorldKey), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY), "t", "-transfer")
-                .buildWith(NucleusParameters.WORLD_PROPERTIES_ENABLED_ONLY)
+                .permissionFlag(plugin.getPermissionRegistry().getPermissionsForNucleusCommand(DisableWorldCommand.class).getBase(), "d", "-disable")
+                .valueFlag(new NucleusWorldPropertiesArgument(Text.of(transferWorldKey), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY), "t", "-transfer")
+                .buildWith(GenericArguments.onlyOne(new NucleusWorldPropertiesArgument(Text.of(worldKey), NucleusWorldPropertiesArgument.Type.ENABLED_ONLY)))
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        WorldProperties worldProperties = args.<WorldProperties>getOne(NucleusParameters.Keys.WORLD).get();
-        Optional<WorldProperties> transferWorld = args.getOne(this.transferWorldKey);
+        WorldProperties worldProperties = args.<WorldProperties>getOne(worldKey).get();
+        Optional<WorldProperties> transferWorld = args.getOne(transferWorldKey);
         boolean disable = args.hasAny("d");
 
         Optional<World> worldOptional = Sponge.getServer().getWorld(worldProperties.getUniqueId());
         if (!worldOptional.isPresent()) {
             // Not loaded.
             if (disable) {
-                disable(worldProperties, src, Nucleus.getNucleus().getMessageProvider(), false);
+                disable(worldProperties, src, plugin.getMessageProvider(), false);
             }
 
-            throw new ReturnMessageException(
-                    Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.unload.alreadyunloaded", worldProperties.getWorldName()));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.unload.alreadyunloaded", worldProperties.getWorldName()));
         }
 
         World world = worldOptional.get();
@@ -73,29 +71,24 @@ public class UnloadWorldCommand extends AbstractCommand<CommandSource> {
             if (!playerCollection.isEmpty()) {
                 // Transfer World is present and enabled.
                 playerCollection.forEach(x -> x.transferToWorld(transferWorld.get().getUniqueId(), transferWorld.get().getSpawnPosition().toDouble()));
-                Sponge.getScheduler().createSyncExecutor(Nucleus.getNucleus()).schedule(() -> unloadWorld(src, world, Nucleus.getNucleus().getMessageProvider(), disable), 40, TimeUnit.MILLISECONDS);
+                Sponge.getScheduler().createSyncExecutor(plugin).schedule(() -> unloadWorld(src, world, plugin.getMessageProvider(), disable), 40, TimeUnit.MILLISECONDS);
 
                 // Well, this bit succeeded, at least.
                 return CommandResult.success();
-            } else if (unloadWorld(src, world, Nucleus.getNucleus().getMessageProvider(), disable)) {
+            } else if (unloadWorld(src, world, plugin.getMessageProvider(), disable)) {
                 return CommandResult.success();
             } else {
                 return CommandResult.empty();
             }
         }
 
-        throw new ReturnMessageException(
-                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.world.unload.players", worldProperties.getWorldName()));
+        throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.world.unload.players", worldProperties.getWorldName()));
     }
 
-    @SuppressWarnings("ConstantConditions")
     private static void disable(WorldProperties worldProperties, CommandSource sender, MessageProvider provider, boolean messageOnError) {
         if (worldProperties.isEnabled()) {
-            try {
-                DisableWorldCommand.disableWorld(sender, worldProperties);
-            } catch (ReturnMessageException e) {
-                sender.sendMessage(e.getText());
-            }
+            worldProperties.setEnabled(false);
+            sender.sendMessage(provider.getTextMessageWithFormat("command.world.disable.success", worldProperties.getWorldName()));
         } else if (messageOnError) {
             sender.sendMessage(provider.getTextMessageWithFormat("command.world.disable.alreadydisabled", worldProperties.getWorldName()));
         }

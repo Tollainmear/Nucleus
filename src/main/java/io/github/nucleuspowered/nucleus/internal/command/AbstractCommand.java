@@ -14,28 +14,46 @@ import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.NucleusPlugin;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.annotationprocessor.Store;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.NoModifiersArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.util.NucleusProcessing;
 import io.github.nucleuspowered.nucleus.internal.CommandPermissionHandler;
 import io.github.nucleuspowered.nucleus.internal.Constants;
 import io.github.nucleuspowered.nucleus.internal.CostCancellableTask;
 import io.github.nucleuspowered.nucleus.internal.TimingsDummy;
 import io.github.nucleuspowered.nucleus.internal.annotations.RequiresEconomy;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
-import io.github.nucleuspowered.nucleus.internal.annotations.command.*;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoCommandPrefix;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoCooldown;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoCost;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoHelpSubcommand;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoTimings;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.NoWarmup;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.RedirectModifiers;
+import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.traits.InternalServiceManagerTrait;
-import io.github.nucleuspowered.nucleus.internal.traits.MessageProviderTrait;
 import io.github.nucleuspowered.nucleus.internal.traits.PermissionHandlerTrait;
 import io.github.nucleuspowered.nucleus.modules.core.config.WarmupConfig;
-import io.github.nucleuspowered.nucleus.util.ClassUtil;
+import io.github.nucleuspowered.nucleus.util.Action;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.commented.SimpleCommentedConfigurationNode;
 import org.apache.commons.lang3.ArrayUtils;
 import org.spongepowered.api.CatalogType;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.block.BlockState;
-import org.spongepowered.api.command.*;
-import org.spongepowered.api.command.args.*;
+import org.spongepowered.api.command.CommandCallable;
+import org.spongepowered.api.command.CommandException;
+import org.spongepowered.api.command.CommandPermissionException;
+import org.spongepowered.api.command.CommandResult;
+import org.spongepowered.api.command.CommandSource;
+import org.spongepowered.api.command.args.ArgumentParseException;
+import org.spongepowered.api.command.args.CommandArgs;
+import org.spongepowered.api.command.args.CommandContext;
+import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.command.args.parsing.InputTokenizer;
 import org.spongepowered.api.command.args.parsing.SingleArg;
 import org.spongepowered.api.command.dispatcher.SimpleDispatcher;
@@ -62,27 +80,39 @@ import org.spongepowered.api.world.Location;
 import org.spongepowered.api.world.World;
 import org.spongepowered.api.world.storage.WorldProperties;
 
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
 
 /**
  * The basis for any command.
  */
 @NonnullByDefault
 @Store(Constants.COMMAND)
-public abstract class AbstractCommand<T extends CommandSource> implements CommandCallable, InternalServiceManagerTrait, PermissionHandlerTrait,
-        MessageProviderTrait {
+public abstract class AbstractCommand<T extends CommandSource> implements CommandCallable, InternalServiceManagerTrait, PermissionHandlerTrait {
 
+    /**
+     * An argument key to denote that the current operation is for a tab completion and
+     * so the argument should react accordingly. This is specifically useful for an
+     * argument that will accept partial completion of names.
+     */
+    public static final String COMPLETION_ARG = "comp";
     private static final InputTokenizer tokeniser = InputTokenizer.quotedStrings(false);
     private static final List<ICommandInterceptor> commandInterceptors = Lists.newArrayList();
-    private final boolean generateConfigEntries;
 
     public static void registerInterceptor(ICommandInterceptor interceptor) {
         commandInterceptors.add(Preconditions.checkNotNull(interceptor));
@@ -100,7 +130,6 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     private final Map<UUID, Instant> cooldownStore = Maps.newHashMap();
 
     protected final CommandPermissionHandler permissions;
-    @Nullable private final Collection<String> additionalPermsToCheck;
     private final String[] aliases;
     private final String[] forcedAliases;
     private final Class<T> sourceType;
@@ -118,7 +147,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
     private final UsageCommand usageCommand = new UsageCommand();
 
-    private final Nucleus plugin;
+    protected final Nucleus plugin;
     private final boolean hasExecutor;
 
     @Nullable private CommandBuilder builder;
@@ -136,9 +165,24 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
     @SuppressWarnings("unchecked")
     public AbstractCommand() {
-        List<Class<?>> types = ClassUtil.getActualTypeArguments(this.getClass(), AbstractCommand.class);
-        this.sourceType = types.isEmpty() ? (Class<T>) CommandSource.class : (Class<T>) types.get(0);
+        // I hate type erasure - it leads to a hack like this. Admittedly, I
+        // could've just created a subclass that does
+        // the same thing, but I like to beat the system! :)
+        //
+        // See http://stackoverflow.com/a/18709327
+        Type type = getClass().getGenericSuperclass();
 
+        while (!(type instanceof ParameterizedType) ||
+                (((ParameterizedType) type).getRawType() != AbstractCommand.class &&
+                ((ParameterizedType) type).getRawType() != AbstractCommand.class)) {
+            if (type instanceof ParameterizedType) {
+                type = ((Class<?>) ((ParameterizedType) type).getRawType()).getGenericSuperclass();
+            } else {
+                type = ((Class<?>) type).getGenericSuperclass();
+            }
+        }
+
+        this.sourceType = (Class<T>) ((ParameterizedType) type).getActualTypeArguments()[0];
         if (this.sourceType.getClass().isAssignableFrom(CommandSource.class)) {
             this.sourceTypePredicate = x -> true;
         } else {
@@ -165,8 +209,8 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
         }
 
-        this.aliases = a.toArray(new String[0]);
-        this.forcedAliases = force.toArray(new String[0]);
+        this.aliases = a.toArray(new String[a.size()]);
+        this.forcedAliases = force.toArray(new String[force.size()]);
 
         // The Permissions annotation provides the backbone of the permissions
         // system for the commands.
@@ -185,14 +229,6 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         //
         // exempt.(cooldown|warmup|cost)
         this.permissions = Nucleus.getNucleus().getPermissionRegistry().getPermissionsForNucleusCommand(this.getClass());
-        if (getClass().isAnnotationPresent(PermissionsFrom.class)) {
-            this.additionalPermsToCheck = Lists.newArrayList();
-            for (String p : getClass().getAnnotation(PermissionsFrom.class).requiresSuffix()) {
-                this.additionalPermsToCheck.add(this.permissions.getPermissionWithSuffix(p));
-            }
-        } else {
-            this.additionalPermsToCheck = null;
-        }
 
         if (this.getClass().isAnnotationPresent(NoModifiers.class)) {
             this.bypassWarmup = true;
@@ -218,13 +254,12 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         } else {
             configSect = this.commandPath.replaceAll("\\.[^.]+$", ".");
         }
-        generateConfigEntries = cca == null ? true : cca.requireGeneration();
 
         this.configSection = configSect + (cca == null ? getAliases()[0].toLowerCase() : cca.value().toLowerCase());
 
-        this.warmupKey = "nucleus." + this.configSection + ".warmup";
-        this.cooldownKey = "nucleus." + this.configSection + ".cooldown";
-        this.costKey = "nucleus." + this.configSection + ".cost";
+        this.warmupKey = "nucleus." + configSection + ".warmup";
+        this.cooldownKey = "nucleus." + configSection + ".cooldown";
+        this.costKey = "nucleus." + configSection + ".cost";
 
         this.requiresEconomy = this.getClass().isAnnotationPresent(RequiresEconomy.class);
 
@@ -292,18 +327,14 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
         afterPostInit();
 
-        permissionsToRegister().forEach(this.permissions::registerPermission);
-        permissionSuffixesToRegister().forEach(this.permissions::registerPermissionSuffix);
+        permissionsToRegister().forEach(permissions::registerPermission);
+        permissionSuffixesToRegister().forEach(permissions::registerPermissionSuffix);
     }
 
     /**
      * Runs after postInit has completed.
      */
     protected void afterPostInit() {}
-
-    protected boolean allowFallback(CommandSource source, CommandArgs args, CommandContext context) {
-        return true;
-    }
 
     // ----------------------------------------------------------------------
     // CommandCallable Interface
@@ -319,7 +350,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         // Phase one: child command processing. Keep track of all thrown arguments.
         List<Tuple<String, CommandException>> thrown = Lists.newArrayList();
 
-        final CommandContext context = new CommandContext();
+        CommandContext context;
         T castedSource;
 
         try {
@@ -338,9 +369,6 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                 } catch (NucleusCommandException e) {
                     // Didn't work out. Let's move on.
                     thrown.addAll(e.getExceptions());
-                    if (!e.isAllowFallback()) {
-                        throw e;
-                    }
                 } catch (CommandException e) {
                     // If the Exception is _not_ of right type, wrap it and add it. This shouldn't happen though.
                     thrown.add(Tuple.of(command + " " + next, e));
@@ -350,7 +378,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
 
             // Phase one: test for what is required
-            if (this.requiresEconomy && !this.plugin.getEconHelper().economyServiceExists()) {
+            if (requiresEconomy && !plugin.getEconHelper().economyServiceExists()) {
                 source.sendMessage(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("command.economyrequired"));
                 return CommandResult.empty();
             }
@@ -373,6 +401,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
 
             // Phase four - create the context and parse the arguments.
+            context = new CommandContext();
             this.argumentParser.parse(source, args, context);
             if (args.hasNext()) {
                 thrown.add(Tuple.of(command, new NucleusArgumentParseException(
@@ -382,7 +411,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                     Text.of(getSimpleUsage(source)),
                     getChildrenUsage(source).orElse(null),
                     true)));
-                throw new NucleusCommandException(thrown, allowFallback(source, args, context));
+                throw new NucleusCommandException(thrown);
             }
         } catch (NucleusCommandException nce) {
             throw nce;
@@ -390,10 +419,10 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             // get the command to get the usage/subs from.
             thrown.add(Tuple.of(command, NucleusArgumentParseException.from(ape, Text.of(getSimpleUsage(source)),
                 getChildrenUsage(source).orElse(null))));
-            throw new NucleusCommandException(thrown, allowFallback(source, args, context));
+            throw new NucleusCommandException(thrown);
         } catch (CommandException ex) {
             thrown.add(Tuple.of(command, ex)); // Errors at this point are expected, so we'll run with it - no need for debug mode checks.
-            throw new NucleusCommandException(thrown, allowFallback(source, args, context));
+            throw new NucleusCommandException(thrown);
         } catch (Throwable throwable) {
             String m;
             if (throwable.getMessage() == null) {
@@ -406,11 +435,11 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                 Tuple.of(command, new CommandException(
                     Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.exception.unexpected", m), throwable)));
             throwable.printStackTrace(); // this is on demand, so we should throw it.
-            throw new NucleusCommandException(thrown, allowFallback(source, args, context));
+            throw new NucleusCommandException(thrown);
         }
 
         try {
-            this.commandTimings.startTimingIfSync();
+            commandTimings.startTimingIfSync();
             ContinueMode mode = preProcessChecks(castedSource, context);
             if (!mode.cont) {
                 return mode.returnType;
@@ -426,10 +455,10 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
 
             // If we're running async...
-            if (this.isAsync) {
+            if (isAsync) {
                 // Create an executor that runs the command async.
-                Nucleus.getNucleus().getLogger().debug("Running " + this.getClass().getName() + " in async mode.");
-                Sponge.getScheduler().createAsyncExecutor(Nucleus.getNucleus()).execute(() -> onExecute(castedSource, context));
+                plugin.getLogger().debug("Running " + this.getClass().getName() + " in async mode.");
+                Sponge.getScheduler().createAsyncExecutor(plugin).execute(() -> onExecute(castedSource, context));
 
                 // Tell Sponge we're done.
                 return CommandResult.success();
@@ -437,7 +466,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
             return onExecute(castedSource, context);
         } finally {
-            this.commandTimings.stopTimingIfSync();
+            commandTimings.stopTimingIfSync();
         }
     }
 
@@ -446,12 +475,12 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         try {
             return startExecute(source, context);
         } catch (TextMessageException ex) {
-            if (this.plugin.isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 ex.printStackTrace();
             }
 
             source.sendMessage(
-                    this.plugin.getMessageProvider().getTextMessageWithTextFormat("command.exception.unexpected", ex.getText()));
+                    plugin.getMessageProvider().getTextMessageWithTextFormat("command.exception.unexpected", ex.getText()));
             return CommandResult.empty();
         } catch (Throwable throwable) {
             throwable.printStackTrace();
@@ -464,7 +493,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
 
             source.sendMessage(
-                    this.plugin.getMessageProvider().getTextMessageWithFormat("command.exception.unexpected", m));
+                plugin.getMessageProvider().getTextMessageWithFormat("command.exception.unexpected", m));
 
             return CommandResult.empty();
         }
@@ -501,7 +530,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                     // code below.
                     final double cost = getCost(p, args);
                     if (cost > 0) {
-                        Sponge.getScheduler().createSyncExecutor(this.plugin).execute(() -> this.plugin.getEconHelper().depositInPlayer(p, cost));
+                        Sponge.getScheduler().createSyncExecutor(plugin).execute(() -> plugin.getEconHelper().depositInPlayer(p, cost));
                     }
                 }
             }
@@ -528,7 +557,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
         final List<String> options = Lists.newArrayList();
         CommandContext context = new CommandContext();
-        context.putArg(CommandContext.TAB_COMPLETION, true); // We don't care for the value.
+        context.putArg(COMPLETION_ARG, true); // We don't care for the value.
 
         // Subcommand
         Object state = args.getState();
@@ -556,9 +585,6 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
      * @return The result of the check.
      */
     private boolean testPermissionOnSubject(Subject source) {
-        if (this.additionalPermsToCheck != null && !this.additionalPermsToCheck.stream().allMatch(source::hasPermission)) {
-            return false;
-        }
         return this.permissions.isPassthrough() || this.permissions.testBase(source);
     }
 
@@ -583,21 +609,21 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
      * @return The help, if it exists.
      */
     @Override public Optional<Text> getHelp(CommandSource source) {
-        if (this.desc == null) {
-            this.desc = Optional.of(Text.of(getDescription()));
+        if (desc == null) {
+            desc = Optional.of(Text.of(getDescription()));
         }
 
-        if (this.extended == null) {
+        if (extended == null) {
             String r = getExtendedDescription();
             if (r.isEmpty()) {
-                this.extended = this.desc;
+                extended = desc;
             } else {
-                this.extended = this.desc.map(text -> Optional.of(Text.of(text, Text.NEW_LINE, Util.SPACE, Text.NEW_LINE, Text.of(r))))
+                extended = desc.map(text -> Optional.of(Text.of(text, Text.NEW_LINE, Util.SPACE, Text.NEW_LINE, Text.of(r))))
                         .orElseGet(() -> Optional.of(Text.of(r)));
             }
         }
 
-        return this.extended;
+        return extended;
     }
 
     /**
@@ -626,7 +652,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
      * @return An array of aliases.
      */
     public String[] getRootCommandAliases() {
-        return Arrays.copyOf(this.forcedAliases, this.forcedAliases.length);
+        return Arrays.copyOf(forcedAliases, forcedAliases.length);
     }
 
     /**
@@ -650,11 +676,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     // -------------------------------------
 
     public String getCommandPath() {
-        return this.commandPath;
-    }
-
-    public String getConfigSection() {
-        return this.configSection;
+        return commandPath;
     }
 
     /**
@@ -801,16 +823,16 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             }
         }
 
-        if (this.generateConfigEntries) {
-            if (!this.bypassCooldown) {
+        if (configSection.equalsIgnoreCase(aliases[0].toLowerCase())) {
+            if (!bypassCooldown) {
                 n.getNode("cooldown").setComment(NucleusPlugin.getNucleus().getMessageProvider().getMessageWithFormat("config.cooldown")).setValue(0);
             }
 
-            if (!this.bypassWarmup || this.generateWarmupAnyway) {
+            if (!bypassWarmup || generateWarmupAnyway) {
                 n.getNode("warmup").setComment(NucleusPlugin.getNucleus().getMessageProvider().getMessageWithFormat("config.warmup")).setValue(0);
             }
 
-            if (!this.bypassCost) {
+            if (!bypassCost) {
                 n.getNode("cost").setComment(NucleusPlugin.getNucleus().getMessageProvider().getMessageWithFormat("config.cost")).setValue(0);
             }
         }
@@ -849,16 +871,16 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     // -------------------------------------
     @SuppressWarnings("unchecked")
     private T checkSourceType(CommandSource source) throws CommandException {
-        if (this.sourceTypePredicate.test(source)) {
+        if (sourceTypePredicate.test(source)) {
             // Yep, we're OK.
             return (T) source;
         }
 
-        if (this.sourceType.equals(Player.class) && !(source instanceof Player)) {
+        if (sourceType.equals(Player.class) && !(source instanceof Player)) {
             throw getExceptionFromKey("command.playeronly");
-        } else if (this.sourceType.equals(ConsoleSource.class) && !(source instanceof ConsoleSource)) {
+        } else if (sourceType.equals(ConsoleSource.class) && !(source instanceof ConsoleSource)) {
             throw getExceptionFromKey("command.consoleonly");
-        } else if (this.sourceType.equals(CommandBlockSource.class) && !(source instanceof CommandBlockSource)) {
+        } else if (sourceType.equals(CommandBlockSource.class) && !(source instanceof CommandBlockSource)) {
             throw getExceptionFromKey("command.commandblockonly");
         }
 
@@ -933,11 +955,6 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         }
     }
 
-    protected final <U extends User> U getUserFromArgs(Class<U> clazz, CommandSource src, Text argument, CommandContext args) throws
-            ReturnMessageException {
-        return getUserFromArgs(clazz, src, argument.toPlain(), args, "command.playeronly");
-    }
-
     protected final <U extends User> U getUserFromArgs(Class<U> clazz, CommandSource src, String argument, CommandContext args) throws ReturnMessageException {
         return getUserFromArgs(clazz, src, argument, args, "command.playeronly");
     }
@@ -986,10 +1003,10 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             // If subject, get the item in hand, otherwise, we can't continue.
             if (src instanceof Player) {
                 return Util.getTypeFromItemInHand((Player)src)
-                    .orElseThrow(() -> new ReturnMessageException(this.plugin.getMessageProvider().getTextMessageWithFormat("command.noneinhand")));
+                    .orElseThrow(() -> new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.noneinhand")));
             }
 
-            throw new ReturnMessageException(this.plugin.getMessageProvider().getTextMessageWithFormat("command.noitemconsole"));
+            throw new ReturnMessageException(plugin.getMessageProvider().getTextMessageWithFormat("command.noitemconsole"));
         }
     }
 
@@ -997,18 +1014,18 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     // Warmups
     // -------------------------------------
     protected int getWarmup(final Player src) {
-        if (this.permissions.testWarmupExempt(src)) {
+        if (permissions.testWarmupExempt(src)) {
             return 0;
         }
 
         // Get the warmup time.
-        return Util.getPositiveIntOptionFromSubject(src, this.warmupKey)
-            .orElseGet(() -> this.plugin.getCommandsConfig().getCommandNode(this.configSection).getNode("warmup").getInt());
+        return Util.getPositiveIntOptionFromSubject(src, warmupKey)
+            .orElseGet(() -> this.plugin.getCommandsConfig().getCommandNode(configSection).getNode("warmup").getInt());
     }
 
     @SuppressWarnings("unchecked")
     private ContinueMode setupWarmup(final Player src, CommandContext args) {
-        if (this.bypassWarmup) {
+        if (bypassWarmup) {
             return ContinueMode.CONTINUE;
         }
 
@@ -1022,23 +1039,23 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         // we already know we have permission,
         // we can skip those checks.
         Task.Builder tb = Sponge.getScheduler().createTaskBuilder().delay(warmupTime, TimeUnit.SECONDS)
-                .execute(new CostCancellableTask(AbstractCommand.this.plugin, src, getCost(src, args)) {
+                .execute(new CostCancellableTask(plugin, src, getCost(src, args)) {
 
                     @Override
                     public void accept(Task task) {
                         src.sendMessage(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("warmup.end"));
-                        this.plugin.getWarmupManager().removeWarmup(src.getUniqueId());
+                        plugin.getWarmupManager().removeWarmup(src.getUniqueId());
                         onExecute((T) src, args);
                     }
                 }).name("Command Warmup - " + src.getName());
 
         // Run an async command async, of course!
-        if (this.isAsync) {
+        if (isAsync) {
             tb.async();
         }
 
         // Add the warmup to the service so we can cancel it if we need to.
-        this.plugin.getWarmupManager().addWarmup(src.getUniqueId(), tb.submit(this.plugin));
+        plugin.getWarmupManager().addWarmup(src.getUniqueId(), tb.submit(plugin));
 
         // Tell the user we're warming up.
         src.sendMessage(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("warmup.start",
@@ -1066,10 +1083,10 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
 
         // If they are still in there, then tell them they are still cooling
         // down.
-        if (!this.bypassCooldown && !args.hasAny(NoModifiersArgument.NO_COOLDOWN_ARGUMENT) &&
-            !this.permissions.testCooldownExempt(src) && this.cooldownStore.containsKey(src.getUniqueId())) {
+        if (!bypassCooldown && !args.hasAny(NoModifiersArgument.NO_COOLDOWN_ARGUMENT) &&
+            !permissions.testCooldownExempt(src) && cooldownStore.containsKey(src.getUniqueId())) {
 
-            Instant l = this.cooldownStore.get(src.getUniqueId());
+            Instant l = cooldownStore.get(src.getUniqueId());
             src.sendMessage(NucleusPlugin.getNucleus().getMessageProvider().getTextMessageWithFormat("cooldown.message",
                     Util.getTimeStringFromSeconds(l.until(Instant.now(), ChronoUnit.SECONDS))));
             return ContinueMode.STOP;
@@ -1079,25 +1096,25 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     }
 
     private void setCooldown(Player src, CommandContext args) {
-        if (!args.hasAny(NoModifiersArgument.NO_COOLDOWN_ARGUMENT) && !this.permissions.testCooldownExempt(src)) {
+        if (!args.hasAny(NoModifiersArgument.NO_COOLDOWN_ARGUMENT) && !permissions.testCooldownExempt(src)) {
             // Get the cooldown time.
-            int cooldownTime = Util.getPositiveIntOptionFromSubject(src, this.cooldownKey)
-                .orElseGet(() -> this.plugin.getCommandsConfig().getCommandNode(this.configSection).getNode("cooldown").getInt());
+            int cooldownTime = Util.getPositiveIntOptionFromSubject(src, cooldownKey)
+                .orElseGet(() -> plugin.getCommandsConfig().getCommandNode(configSection).getNode("cooldown").getInt());
             if (cooldownTime > 0) {
                 // If there is a cooldown, add the cooldown to the list, with
                 // the end time as an Instant.
-                this.cooldownStore.put(src.getUniqueId(), Instant.now().plus(cooldownTime, ChronoUnit.SECONDS));
+                cooldownStore.put(src.getUniqueId(), Instant.now().plus(cooldownTime, ChronoUnit.SECONDS));
             }
         }
     }
 
     protected void removeCooldown(UUID uuid) {
-        this.cooldownStore.remove(uuid);
+        cooldownStore.remove(uuid);
     }
 
     private void cleanCooldowns() {
         // If the cooldown end is in the past, remove it.
-        this.cooldownStore.entrySet().removeIf(k -> k.getValue().isBefore(Instant.now()));
+        cooldownStore.entrySet().removeIf(k -> k.getValue().isBefore(Instant.now()));
     }
 
     // -------------------------------------
@@ -1116,7 +1133,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             return ContinueMode.CONTINUE;
         }
 
-        if (!this.plugin.getEconHelper().withdrawFromPlayer(src, cost)) {
+        if (!plugin.getEconHelper().withdrawFromPlayer(src, cost)) {
             return ContinueMode.STOP;
         }
 
@@ -1136,13 +1153,13 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
             boolean noCost = args != null && args.<Boolean>getOne(NoModifiersArgument.NO_COST_ARGUMENT).orElse(false);
 
             // If the subject or command itself is exempt, return a zero.
-            if (this.bypassCost || noCost || this.permissions.testCostExempt(src)) {
+            if (bypassCost || noCost || permissions.testCostExempt(src)) {
                 return 0.;
             }
 
             // Return the cost if positive, else, zero.
-            double cost = Util.getDoubleOptionFromSubject(src, this.costKey)
-                .orElseGet(() -> this.plugin.getCommandsConfig().getCommandNode(this.configSection).getNode("cost").getDouble(0.));
+            double cost = Util.getDoubleOptionFromSubject(src, costKey)
+                .orElseGet(() -> plugin.getCommandsConfig().getCommandNode(configSection).getNode("cost").getDouble(0.));
             if (cost <= 0.) {
                 return 0.;
             }
@@ -1159,7 +1176,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     private void createChildCommands() {
         Set<Class<? extends AbstractCommand<?>>> bases = null;
         if (this.moduleCommands != null) {
-            bases = this.moduleCommands.stream().filter(x -> {
+            bases = moduleCommands.stream().filter(x -> {
                 RegisterCommand r = x.getAnnotation(RegisterCommand.class);
                 // Only commands that are subcommands of this.
                 return r != null && r.subcommandOf().equals(this.getClass());
@@ -1169,9 +1186,9 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         if (bases != null) {
             bases.forEach(cb -> {
                 try {
-                    this.builder.buildCommand(cb, false).ifPresent(x -> this.dispatcher.register(x, Arrays.asList(x.getAliases())));
+                    builder.buildCommand(cb, false).ifPresent(x -> this.dispatcher.register(x, Arrays.asList(x.getAliases())));
                 } catch (Exception e) {
-                    this.plugin.getLogger().error(NucleusPlugin.getNucleus().getMessageProvider().getMessageWithFormat("command.child.notloaded", cb.getName()));
+                    plugin.getLogger().error(NucleusPlugin.getNucleus().getMessageProvider().getMessageWithFormat("command.child.notloaded", cb.getName()));
 
                     if (Nucleus.getNucleus().isDebugMode()) {
                         e.printStackTrace();
@@ -1181,7 +1198,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         }
 
         if (!this.getClass().isAnnotationPresent(NoHelpSubcommand.class)) {
-            this.dispatcher.register(this.usageCommand, "?", "help");
+            this.dispatcher.register(usageCommand, "?", "help");
         }
     }
 
@@ -1196,49 +1213,28 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
     private class UsageCommand implements CommandCallable, CommandExecutor {
 
         @Override
-        public CommandResult execute(CommandSource src, CommandContext args) {
+        public CommandResult execute(CommandSource src, CommandContext args) throws CommandException {
             return process(src, "");
         }
 
         @Override
-        public CommandResult process(CommandSource source, String arguments) {
+        public CommandResult process(CommandSource source, String arguments) throws CommandException {
             return process(source, arguments, null);
         }
 
         CommandResult process(CommandSource source, String arguments, @Nullable String previous) {
             if (!testPermission(source)) {
-                source.sendMessage(AbstractCommand.this.plugin.getMessageProvider().getTextMessageWithFormat("command.usage.nopermission"));
+                source.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.usage.nopermission"));
                 return CommandResult.empty();
-            }
-
-            try {
-                List<Text> textMessages = usage(source, previous);
-
-                // Header
-                String command = getCommandPath().replaceAll("\\.", " ");
-                Text header = plugin.getMessageProvider().getTextMessageWithFormat("command.usage.header", command);
-
-                PaginationService ps = Sponge.getServiceManager().provideUnchecked(PaginationService.class);
-                PaginationList.Builder builder = ps.builder().title(header).contents(textMessages);
-                if (!(source instanceof Player)) {
-                    builder.linesPerPage(-1);
-                }
-
-                builder.sendTo(source);
-                return CommandResult.success();
-            } catch (CommandPermissionException e) {
-                source.sendMessage(AbstractCommand.this.plugin.getMessageProvider().getTextMessageWithFormat("command.usage.nopermission"));
-                return CommandResult.empty();
-            }
-        }
-
-        public List<Text> usage(CommandSource source, @Nullable String previous) throws CommandPermissionException {
-            if (!testPermission(source)) {
-                throw new CommandPermissionException();
             }
 
             Nucleus plugin = Nucleus.getNucleus();
             AbstractCommand<?> parent = AbstractCommand.this;
+
+            String command = getCommandPath().replaceAll("\\.", " ");
+
+            // Header
+            Text header = plugin.getMessageProvider().getTextMessageWithFormat("command.usage.header", command);
 
             List<Text> textMessages = Lists.newArrayList();
 
@@ -1251,8 +1247,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                 textMessages.add(plugin.getMessageProvider().getTextMessageWithFormat("command.usage.playeronly"));
             }
 
-            textMessages.add(plugin.getMessageProvider().getTextMessageWithFormat("command.usage.module", AbstractCommand.this.module,
-                    AbstractCommand.this.moduleId));
+            textMessages.add(plugin.getMessageProvider().getTextMessageWithFormat("command.usage.module", module, moduleId));
 
             String desc = getDescription();
             if (!desc.isEmpty()) {
@@ -1271,7 +1266,7 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                 }
             }
 
-            if (AbstractCommand.this.hasExecutor) {
+            if (hasExecutor) {
                 textMessages.add(Util.SPACE);
                 textMessages.add(plugin.getMessageProvider().getTextMessageWithFormat("command.usage.usage"));
                 textMessages.add(Text.of(TextColors.WHITE, AbstractCommand.this.getSimpleUsage(source)));
@@ -1283,11 +1278,18 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
                 textMessages.add(Text.of(TextColors.WHITE, x));
             });
 
-            return textMessages;
+            PaginationService ps = Sponge.getServiceManager().provideUnchecked(PaginationService.class);
+            PaginationList.Builder builder = ps.builder().title(header).contents(textMessages);
+            if (!(source instanceof Player)) {
+                builder.linesPerPage(-1);
+            }
+
+            builder.sendTo(source);
+            return CommandResult.success();
         }
 
         @Override
-        public List<String> getSuggestions(CommandSource source, String arguments, @Nullable Location<World> targetPosition) {
+        public List<String> getSuggestions(CommandSource source, String arguments, @Nullable Location<World> targetPosition) throws CommandException {
             return Lists.newArrayList();
         }
 
@@ -1312,103 +1314,35 @@ public abstract class AbstractCommand<T extends CommandSource> implements Comman
         }
     }
 
-    public List<Text> getUsageText(CommandSource source) {
-        try {
-            return this.usageCommand.usage(source, null);
-        } catch (CommandPermissionException e) {
-            return Lists.newArrayList();
-        }
-    }
-
     @NonnullByDefault
     public abstract static class SimpleTargetOtherPlayer extends AbstractCommand<CommandSource> {
+
+        final String playerKey = "player";
 
         protected CommandElement[] additionalArguments() {
             return new CommandElement[] {};
         }
 
         @Override public final CommandElement[] getArguments() {
-            CommandElement[] additional = additionalArguments();
-            if (additional.length == 0) {
-                // One element - optional
-                return new CommandElement[] {
-                        GenericArguments.optional(
-                                GenericArguments.requiringPermission(
-                                        new NoModifiersArgument<>(
-                                                NucleusParameters.ONE_PLAYER,
-                                                NoModifiersArgument.PLAYER_NOT_CALLER_PREDICATE
-                                        ),
-                                        this.permissions.getOthers()
-                                )
-                        )
-                };
-            }
-
             return ArrayUtils.addAll(new CommandElement[] {
                 GenericArguments.optionalWeak(
                     GenericArguments.requiringPermission(
                         new NoModifiersArgument<>(
-                                NucleusParameters.ONE_PLAYER,
-                                NoModifiersArgument.PLAYER_NOT_CALLER_PREDICATE
+                            SelectorWrapperArgument.nicknameSelector(Text.of(playerKey), NicknameArgument.UnderlyingType.PLAYER),
+                            NoModifiersArgument.PLAYER_NOT_CALLER_PREDICATE
                         ),
-                        this.permissions.getOthers()
+                        permissions.getOthers()
                     )
                 )
-            }, additional);
+            }, additionalArguments());
         }
 
         @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-            Player target = this.getUserFromArgs(Player.class, src, NucleusParameters.Keys.PLAYER, args);
+            Player target = this.getUserFromArgs(Player.class, src, playerKey, args);
             return executeWithPlayer(src, target, args, src instanceof Player && ((Player) src).getUniqueId().equals(target.getUniqueId()));
         }
 
         protected abstract CommandResult executeWithPlayer(CommandSource source, Player target, CommandContext args, final boolean isSelf)
-                throws Exception;
-    }
-
-    @NonnullByDefault
-    public abstract static class SimpleTargetOtherUser extends AbstractCommand<CommandSource> {
-
-        protected CommandElement[] additionalArguments() {
-            return new CommandElement[] {};
-        }
-
-        @Override public final CommandElement[] getArguments() {
-            CommandElement[] additional = additionalArguments();
-            if (additional.length == 0) {
-                // One element - optional
-                return new CommandElement[] {
-                        GenericArguments.optional(
-                                GenericArguments.requiringPermission(
-                                        new NoModifiersArgument<>(
-                                                NucleusParameters.ONE_USER,
-                                                NoModifiersArgument.USER_NOT_CALLER_PREDICATE
-                                        ),
-                                        this.permissions.getOthers()
-                                )
-                        )
-                };
-            }
-
-            return ArrayUtils.addAll(new CommandElement[] {
-                    GenericArguments.optionalWeak(
-                            GenericArguments.requiringPermission(
-                                    new NoModifiersArgument<>(
-                                            NucleusParameters.ONE_USER,
-                                            NoModifiersArgument.USER_NOT_CALLER_PREDICATE
-                                    ),
-                                    this.permissions.getOthers()
-                            )
-                    )
-            }, additional);
-        }
-
-        @Override protected CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-            User target = this.getUserFromArgs(User.class, src, NucleusParameters.Keys.USER, args);
-            return executeWithPlayer(src, target, args, src instanceof Player && ((Player) src).getUniqueId().equals(target.getUniqueId()));
-        }
-
-        protected abstract CommandResult executeWithPlayer(CommandSource source, User target, CommandContext args, final boolean isSelf)
                 throws Exception;
     }
 }

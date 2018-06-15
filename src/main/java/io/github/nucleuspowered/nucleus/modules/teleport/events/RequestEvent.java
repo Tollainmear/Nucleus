@@ -28,7 +28,7 @@ public abstract class RequestEvent extends AbstractEvent implements NucleusTelep
     }
 
     @Override public Optional<Text> getCancelMessage() {
-        return Optional.ofNullable(this.cancelMessage);
+        return Optional.ofNullable(cancelMessage);
     }
 
     @Override public void setCancelMessage(@Nullable Text message) {
@@ -36,7 +36,7 @@ public abstract class RequestEvent extends AbstractEvent implements NucleusTelep
     }
 
     @Override public Player getTargetEntity() {
-        return this.targetEntity;
+        return targetEntity;
     }
 
     @Override public boolean isCancelled() {

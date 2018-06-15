@@ -4,7 +4,6 @@
  */
 package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
-import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
@@ -25,22 +24,22 @@ import org.spongepowered.api.util.annotation.NonnullByDefault;
 @NonnullByDefault
 @RunAsync
 @NoModifiers
-@Permissions(suggestedLevel = SuggestedLevel.OWNER)
+@Permissions(suggestedLevel = SuggestedLevel.NONE)
 @RegisterCommand({ "plainbroadcast", "pbcast", "pbc" })
 public class PlainBroadcastCommand extends AbstractCommand<CommandSource> {
     private final String message = "message";
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] { GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(this.message))) };
+        return new CommandElement[] { GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(message))) };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
         try {
-            new NucleusTextTemplateMessageSender(NucleusTextTemplateFactory.createFromString(args.<String>getOne(this.message).get()), src).send();
+            new NucleusTextTemplateMessageSender(NucleusTextTemplateFactory.createFromString(args.<String>getOne(message).get()), src).send();
         } catch (Throwable throwable) {
-            if (Nucleus.getNucleus().isDebugMode()) {
+            if (plugin.isDebugMode()) {
                 throwable.printStackTrace();
             }
 

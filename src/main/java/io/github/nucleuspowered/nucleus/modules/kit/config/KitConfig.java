@@ -25,18 +25,18 @@ public class KitConfig {
     private boolean processTokens = false;
 
     public boolean isMustGetAll() {
-        return this.mustGetAll;
+        return mustGetAll;
     }
 
     public boolean isSeparatePermissions() {
-        return this.separatePermissions;
+        return separatePermissions;
     }
 
     public boolean isDropKitIfFull() {
-        return this.dropKitIfFull;
+        return dropKitIfFull;
     }
 
     public boolean isProcessTokens() {
-        return this.processTokens;
+        return processTokens;
     }
 }

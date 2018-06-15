@@ -5,10 +5,11 @@
 package io.github.nucleuspowered.nucleus.modules.admin.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
+import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import org.spongepowered.api.command.CommandResult;
@@ -22,6 +23,7 @@ import org.spongepowered.api.entity.living.Living;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.gamemode.GameMode;
 import org.spongepowered.api.entity.living.player.gamemode.GameModes;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
 
 import java.util.Collection;
@@ -33,16 +35,18 @@ import java.util.Collection;
 @NonnullByDefault
 public class KillCommand extends AbstractCommand<CommandSource> {
 
+    private final String key = "subject";
+
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-                NucleusParameters.MANY_ENTITY
+            SelectorWrapperArgument.nicknameSelector(Text.of(key), NicknameArgument.UnderlyingType.PLAYER, false, Entity.class)
         };
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
-        Collection<Entity> entities = args.getAll(NucleusParameters.Keys.SUBJECT);
+        Collection<Entity> entities = args.getAll(key);
 
         int entityKillCount = 0;
         int playerKillCount = 0;
@@ -67,14 +71,14 @@ public class KillCommand extends AbstractCommand<CommandSource> {
 
             if (x instanceof Player) {
                 playerKillCount++;
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kill.killed",
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kill.killed",
                         Nucleus.getNucleus().getNameUtil().getSerialisedName((Player)x)));
-                ((Player)x).sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kill.killedby", src.getName()));
+                ((Player)x).sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kill.killedby", src.getName()));
             }
         }
 
         if (entityKillCount > playerKillCount) {
-            src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.kill.overall", String.valueOf(entityKillCount),
+            src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.kill.overall", String.valueOf(entityKillCount),
                     String.valueOf(playerKillCount)));
         }
 

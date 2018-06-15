@@ -27,7 +27,7 @@ import uk.co.drnaylor.quickstart.exceptions.NoModuleException;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-public class InfoListener implements Reloadable, ListenerBase.Conditional {
+public class InfoListener extends ListenerBase implements Reloadable, ListenerBase.Conditional {
 
     private final String motdPerm = Nucleus.getNucleus().getPermissionRegistry()
             .getPermissionsForNucleusCommand(MotdCommand.class).getPermissionWithSuffix("login");
@@ -40,17 +40,17 @@ public class InfoListener implements Reloadable, ListenerBase.Conditional {
     @Listener
     public void playerJoin(ClientConnectionEvent.Join event, @Getter("getTargetEntity") Player player) {
         // Send message one second later on the Async thread.
-        Sponge.getScheduler().createAsyncExecutor(Nucleus.getNucleus()).schedule(() -> {
+        Sponge.getScheduler().createAsyncExecutor(plugin).schedule(() -> {
                 if (player.hasPermission(this.motdPerm)) {
-                    Nucleus.getNucleus().getTextFileController(InfoModule.MOTD_KEY).ifPresent(x -> {
+                    plugin.getTextFileController(InfoModule.MOTD_KEY).ifPresent(x -> {
                         if (this.usePagination) {
-                            x.sendToPlayer(player, this.title);
+                            x.sendToPlayer(player, title);
                         } else {
                             x.getTextFromNucleusTextTemplates(player).forEach(player::sendMessage);
                         }
                     });
                 }
-            }, this.delay, TimeUnit.MILLISECONDS);
+            }, delay, TimeUnit.MILLISECONDS);
     }
 
     @Override
@@ -60,7 +60,7 @@ public class InfoListener implements Reloadable, ListenerBase.Conditional {
         return msp;
     }
 
-    @Override public void onReload() {
+    @Override public void onReload() throws Exception {
         InfoConfig config = Nucleus.getNucleus().getInternalServiceManager().getServiceUnchecked(InfoConfigAdapter.class).getNodeOrDefault();
         this.delay = (int)(config.getMotdDelay() * 1000);
         this.usePagination = config.isMotdUsePagination();

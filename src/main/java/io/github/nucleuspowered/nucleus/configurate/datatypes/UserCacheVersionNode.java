@@ -21,10 +21,10 @@ public class UserCacheVersionNode {
     private Map<UUID, UserCacheDataNode> node = Maps.newHashMap();
 
     public int getVersion() {
-        return this.version;
+        return version;
     }
 
     public Map<UUID, UserCacheDataNode> getNode() {
-        return this.node;
+        return node;
     }
 }

@@ -6,12 +6,13 @@ package io.github.nucleuspowered.nucleus.modules.mute.commands;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
+import io.github.nucleuspowered.nucleus.argumentparsers.ResortUserArgumentParser;
+import io.github.nucleuspowered.nucleus.argumentparsers.TimespanArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.RunAsync;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.command.ReturnMessageException;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -26,8 +27,10 @@ import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.entity.living.player.User;
+import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MessageChannel;
 import org.spongepowered.api.text.channel.MutableMessageChannel;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -60,6 +63,10 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
         return mutedChatPermission;
     }
 
+    private final String playerArgument = "subject";
+    private final String timespanArgument = "time";
+    private final String reason = "reason";
+
     @Override
     public Map<String, PermissionInformation> permissionSuffixesToRegister() {
         Map<String, PermissionInformation> m = new HashMap<>();
@@ -74,23 +81,22 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
     @Override
     public CommandElement[] getArguments() {
         return new CommandElement[] {
-            NucleusParameters.ONE_USER,
-            NucleusParameters.OPTIONAL_WEAK_DURATION,
-            NucleusParameters.OPTIONAL_REASON
-        };
+            GenericArguments.onlyOne(new ResortUserArgumentParser(Text.of(playerArgument))),
+            GenericArguments.onlyOne(GenericArguments.optionalWeak(new TimespanArgument(Text.of(timespanArgument)))),
+            GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.remainingJoinedStrings(Text.of(reason))))};
     }
 
     @Override
     public CommandResult executeCommand(CommandSource src, CommandContext args) throws Exception {
 
         // Get the user.
-        User user = args.<User>getOne(NucleusParameters.Keys.USER).get();
+        User user = args.<User>getOne(playerArgument).get();
 
-        Optional<Long> time = args.getOne(NucleusParameters.Keys.DURATION);
-        Optional<MuteData> omd = this.handler.getPlayerMuteData(user);
-        Optional<String> reas = args.getOne(NucleusParameters.Keys.REASON);
+        Optional<Long> time = args.getOne(timespanArgument);
+        Optional<MuteData> omd = handler.getPlayerMuteData(user);
+        Optional<String> reas = args.getOne(reason);
 
-        if (this.permissions.testSuffix(user, "exempt.target", src, false)) {
+        if (permissions.testSuffix(user, "exempt.target", src, false)) {
             throw ReturnMessageException.fromKey("command.mute.exempt", user.getName());
         }
 
@@ -99,7 +105,7 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
             if (!this.requireUnmutePermission || this.permissions.testSuffix(src, "unmute")) {
                 // Unmute.
                 this.handler.unmutePlayer(user, CauseStackHelper.createCause(src), false);
-                src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.unmute.success", user.getName(), src.getName()));
+                src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.unmute.success", user.getName(), src.getName()));
                 return CommandResult.success();
             }
 
@@ -107,13 +113,13 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
         }
 
         // Do we have a reason?
-        String rs = reas.orElse(Nucleus.getNucleus().getMessageProvider().getMessageWithFormat("command.mute.defaultreason"));
+        String rs = reas.orElse(plugin.getMessageProvider().getMessageWithFormat("command.mute.defaultreason"));
         UUID ua = Util.consoleFakeUUID;
         if (src instanceof Player) {
             ua = ((Player) src).getUniqueId();
         }
 
-        if (this.maxMute > 0 && time.orElse(Long.MAX_VALUE) > this.maxMute && !this.permissions.testSuffix(src, "exempt.length")) {
+        if (this.maxMute > 0 && time.orElse(Long.MAX_VALUE) > this.maxMute && !permissions.testSuffix(src, "exempt.length")) {
             throw ReturnMessageException.fromKey("command.mute.length.toolong",
                     Util.getTimeStringFromSeconds(this.maxMute));
         }
@@ -129,9 +135,9 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
             data = new MuteData(ua, rs);
         }
 
-        if (this.handler.mutePlayer(user, data)) {
+        if (handler.mutePlayer(user, data)) {
             // Success.
-            MutableMessageChannel mc = new PermissionMessageChannel(this.permissions.getPermissionWithSuffix("notify")).asMutable();
+            MutableMessageChannel mc = new PermissionMessageChannel(permissions.getPermissionWithSuffix("notify")).asMutable();
             mc.addMember(src);
 
             if (time.isPresent()) {
@@ -143,28 +149,28 @@ public class MuteCommand extends AbstractCommand<CommandSource> implements Reloa
             return CommandResult.success();
         }
 
-        src.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.mute.fail", user.getName()));
+        src.sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.mute.fail", user.getName()));
         return CommandResult.empty();
     }
 
     private void timedMute(CommandSource src, User user, MuteData data, long time, MessageChannel mc) {
         String ts = Util.getTimeStringFromSeconds(time);
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.mute.success.time", user.getName(), src.getName(), ts));
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", data.getReason()));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("command.mute.success.time", user.getName(), src.getName(), ts));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", data.getReason()));
 
         if (user.isOnline()) {
-            user.getPlayer().get().sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("mute.playernotify.time", ts));
-            user.getPlayer().get().sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reason", data.getReason()));
+            user.getPlayer().get().sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("mute.playernotify.time", ts));
+            user.getPlayer().get().sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.reason", data.getReason()));
         }
     }
 
     private void permMute(CommandSource src, User user, MuteData data, MessageChannel mc) {
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.mute.success.norm", user.getName(), src.getName()));
-        mc.send(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", data.getReason()));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("command.mute.success.norm", user.getName(), src.getName()));
+        mc.send(plugin.getMessageProvider().getTextMessageWithFormat("standard.reasoncoloured", data.getReason()));
 
         if (user.isOnline()) {
-            user.getPlayer().get().sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("mute.playernotify.standard"));
-            user.getPlayer().get().sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.reason", data.getReason()));
+            user.getPlayer().get().sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("mute.playernotify.standard"));
+            user.getPlayer().get().sendMessage(plugin.getMessageProvider().getTextMessageWithFormat("command.reason", data.getReason()));
         }
     }
 

@@ -10,7 +10,6 @@ import io.github.nucleuspowered.nucleus.internal.annotations.command.NoModifiers
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
-import io.github.nucleuspowered.nucleus.internal.command.NucleusParameters;
 import io.github.nucleuspowered.nucleus.internal.docgen.annotations.EssentialsEquivalent;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -18,6 +17,7 @@ import io.github.nucleuspowered.nucleus.modules.teleport.datamodules.TeleportUse
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.args.CommandContext;
 import org.spongepowered.api.command.args.CommandElement;
+import org.spongepowered.api.command.args.GenericArguments;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.util.annotation.NonnullByDefault;
@@ -33,6 +33,8 @@ import java.util.Map;
 @EssentialsEquivalent("tptoggle")
 public class TeleportToggleCommand extends AbstractCommand<Player> {
 
+    private final String key = "toggle";
+
     @Override
     public Map<String, PermissionInformation> permissionSuffixesToRegister() {
         Map<String, PermissionInformation> m = new HashMap<>();
@@ -42,19 +44,16 @@ public class TeleportToggleCommand extends AbstractCommand<Player> {
 
     @Override
     public CommandElement[] getArguments() {
-        return new CommandElement[] {
-                NucleusParameters.OPTIONAL_ONE_TRUE_FALSE
-        };
+        return new CommandElement[] {GenericArguments.optional(GenericArguments.onlyOne(GenericArguments.bool(Text.of(key))))};
     }
 
     @Override
-    public CommandResult executeCommand(Player src, CommandContext args) {
+    public CommandResult executeCommand(Player src, CommandContext args) throws Exception {
         final TeleportUserDataModule iqsu = Nucleus.getNucleus().getUserDataManager().getUnchecked(src).get(TeleportUserDataModule.class);
-        boolean flip = args.<Boolean>getOne(NucleusParameters.Keys.BOOL).orElseGet(() -> !iqsu.isTeleportToggled());
+        boolean flip = args.<Boolean>getOne(key).orElseGet(() -> !iqsu.isTeleportToggled());
         iqsu.setTeleportToggled(flip);
         src.sendMessage(Text.builder().append(
-                Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("command.tptoggle.success",
-                        Nucleus.getNucleus().getMessageProvider().getMessageWithFormat(flip ? "standard.enabled" : "standard.disabled")))
+                plugin.getMessageProvider().getTextMessageWithFormat("command.tptoggle.success", plugin.getMessageProvider().getMessageWithFormat(flip ? "standard.enabled" : "standard.disabled")))
                 .build());
         return CommandResult.success();
     }
