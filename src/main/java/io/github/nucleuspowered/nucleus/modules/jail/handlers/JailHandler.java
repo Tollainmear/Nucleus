@@ -16,6 +16,7 @@ import io.github.nucleuspowered.nucleus.api.nucleusdata.NamedLocation;
 import io.github.nucleuspowered.nucleus.api.service.NucleusJailService;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularGeneralService;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
+import io.github.nucleuspowered.nucleus.internal.data.EndTimestamp;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.internal.teleport.NucleusTeleportHandler;
 import io.github.nucleuspowered.nucleus.modules.core.datamodules.CoreUserDataModule;
@@ -152,7 +153,7 @@ public class JailHandler implements NucleusJailService, ContextCalculator<Subjec
             Sponge.getScheduler().createSyncExecutor(Nucleus.getNucleus()).execute(() -> {
                 Player player = user.getPlayer().get();
                 Nucleus.getNucleus().getTeleportHandler().teleportPlayer(player, owl.get().getLocation().get(), owl.get().getRotation(),
-                    NucleusTeleportHandler.StandardTeleportMode.NO_CHECK, Sponge.getCauseStackManager().getCurrentCause());
+                    NucleusTeleportHandler.StandardTeleportMode.NO_CHECK, Sponge.getCauseStackManager().getCurrentCause(), true);
                 modularUserService.get(FlyUserDataModule.class).setFlying(false);
             });
         } else {
@@ -256,17 +257,21 @@ public class JailHandler implements NucleusJailService, ContextCalculator<Subjec
     }
 
     public boolean checkJail(final User player, boolean sendMessage) {
-        Optional<JailData> omd = Util.testForEndTimestamp(getPlayerJailDataInternal(player), () -> unjailPlayer(player));
-        if (omd.isPresent()) {
+        // if the jail doesn't exist, treat it as expired.
+        if (!getPlayerJailDataInternal(player).map(EndTimestamp::expired).orElse(true)) {
             if (sendMessage) {
                 Nucleus.getNucleus().getUserDataManager().getUnchecked(player).get(FlyUserDataModule.class).setFlying(false);
-                player.getPlayer().ifPresent(x -> onJail(omd.get(), x));
+                player.getPlayer().ifPresent(this::onJail);
             }
 
             return true;
         }
 
         return false;
+    }
+
+    private void onJail(Player user) {
+        getPlayerJailDataInternal(user).ifPresent(x -> onJail(x, user));
     }
 
     public void onJail(JailData md, Player user) {

@@ -36,7 +36,6 @@ import io.github.nucleuspowered.nucleus.internal.InternalServiceManager;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
 import io.github.nucleuspowered.nucleus.internal.PreloadTasks;
 import io.github.nucleuspowered.nucleus.internal.TextFileController;
-import io.github.nucleuspowered.nucleus.internal.WorldCorrector;
 import io.github.nucleuspowered.nucleus.internal.client.ClientMessageReciever;
 import io.github.nucleuspowered.nucleus.internal.docgen.DocGenCache;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
@@ -52,8 +51,10 @@ import io.github.nucleuspowered.nucleus.internal.qsml.NucleusLoggerProxy;
 import io.github.nucleuspowered.nucleus.internal.qsml.QuickStartModuleConstructor;
 import io.github.nucleuspowered.nucleus.internal.qsml.event.BaseModuleEvent;
 import io.github.nucleuspowered.nucleus.internal.services.CommandRemapperService;
+import io.github.nucleuspowered.nucleus.internal.services.EnderchestAccessService;
 import io.github.nucleuspowered.nucleus.internal.services.HotbarFirstReorderService;
 import io.github.nucleuspowered.nucleus.internal.services.InventoryReorderService;
+import io.github.nucleuspowered.nucleus.internal.services.UserEnderchestAccessService;
 import io.github.nucleuspowered.nucleus.internal.services.WarmupManager;
 import io.github.nucleuspowered.nucleus.internal.teleport.NucleusTeleportHandler;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTokenServiceImpl;
@@ -67,7 +68,6 @@ import io.github.nucleuspowered.nucleus.modules.core.datamodules.UniqueUserCount
 import io.github.nucleuspowered.nucleus.modules.core.service.UUIDChangeService;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
-import ninja.leaping.configurate.objectmapping.ObjectMappingException;
 import org.slf4j.Logger;
 import org.spongepowered.api.Game;
 import org.spongepowered.api.GameState;
@@ -76,6 +76,7 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.asset.Asset;
 import org.spongepowered.api.command.source.ConsoleSource;
 import org.spongepowered.api.config.ConfigDir;
+import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
@@ -146,7 +147,7 @@ public class NucleusPlugin extends Nucleus {
 
     private final List<Text> startupMessages = Lists.newArrayList();
 
-    private final InternalServiceManager serviceManager = new InternalServiceManager(this);
+    private final InternalServiceManager serviceManager = new InternalServiceManager();
     private MessageProvider messageProvider = new ResourceMessageProvider(ResourceMessageProvider.messagesBundle);
     private MessageProvider commandMessageProvider = new ResourceMessageProvider(ResourceMessageProvider.commandMessagesBundle);
 
@@ -276,8 +277,10 @@ public class NucleusPlugin extends Nucleus {
             this.nameBanService = new NameBanService(d.getNameBanDataProvider());
             this.userCacheService = new UserCacheService(d.getUserCacheDataProvider());
             this.warmupManager = new WarmupManager();
-            this.textParsingUtils = new TextParsingUtils(this);
-            this.nameUtil = new NameUtil(this);
+            this.textParsingUtils = new TextParsingUtils();
+            registerReloadable(this.textParsingUtils);
+
+            this.nameUtil = new NameUtil();
 
             if (this.isServer) {
                 allChange();
@@ -406,14 +409,28 @@ public class NucleusPlugin extends Nucleus {
             return;
         }
 
+        // ---- API7 COMPAT
+
         // Register the inventory service
         // TODO: Remove for API 7.1
         try {
             Class.forName("org.spongepowered.api.item.inventory.InventoryTransformations");
             this.serviceManager.registerService(InventoryReorderService.class, new HotbarFirstReorderService());
         } catch (Throwable e) {
+            this.logger.warn("Hotbar transformations are not available: kits may be given in an unexpected order. Update Sponge to fix this.");
             this.serviceManager.registerService(InventoryReorderService.class, InventoryReorderService.DEFAULT);
         }
+
+        // Register the Enderchest Service
+        try {
+            User.class.getMethod("getEnderChestInventory");
+            this.serviceManager.registerService(EnderchestAccessService.class, new UserEnderchestAccessService());
+        } catch (Throwable e) {
+            this.logger.warn("Ender Chest access is only available for online players. Update Sponge to get access to offline players' enderchests.");
+            this.serviceManager.registerService(EnderchestAccessService.class, EnderchestAccessService.DEFAULT);
+        }
+
+        // ---- END API7 COMPAT
 
         try {
             Sponge.getEventManager().post(new BaseModuleEvent.AboutToConstructEvent(this));
@@ -479,15 +496,6 @@ public class NucleusPlugin extends Nucleus {
     public void onGameStarting(GameStartingServerEvent event) {
         if (this.isErrored == null) {
             this.logger.info(this.messageProvider.getMessageWithFormat("startup.gamestart", PluginInfo.NAME));
-            try {
-                if (this.getConfigValue(CoreModule.ID, CoreConfigAdapter.class, CoreConfig::isTrackWorldUUIDs).orElse(true)) {
-                    WorldCorrector.worldCheck();
-                } else {
-                    WorldCorrector.delete();
-                }
-            } catch (IOException | ObjectMappingException e) {
-                e.printStackTrace();
-            }
 
             // Load up the general data files now, mods should have registered items by now.
             try {
@@ -981,7 +989,7 @@ public class NucleusPlugin extends Nucleus {
         Sponge.getEventManager().unregisterPluginListeners(this);
         Sponge.getCommandManager().getOwnedBy(this).forEach(Sponge.getCommandManager()::removeMapping);
         Sponge.getScheduler().getScheduledTasks(this).forEach(Task::cancel);
-        getInternalServiceManager().getServiceUnchecked(CommandRemapperService.class).deactivate();
+        getInternalServiceManager().getService(CommandRemapperService.class).ifPresent(CommandRemapperService::deactivate);
 
         // Re-register this to warn people about the error.
         Sponge.getEventManager().registerListener(this, GameStartedServerEvent.class, e -> errorOnStartup());

@@ -7,10 +7,8 @@ package io.github.nucleuspowered.nucleus;
 import com.flowpowered.math.vector.Vector3d;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
-import io.github.nucleuspowered.nucleus.internal.data.EndTimestamp;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.internal.services.InventoryReorderService;
-import io.github.nucleuspowered.nucleus.util.Action;
 import io.github.nucleuspowered.nucleus.util.PaginationBuilderWrapper;
 import io.github.nucleuspowered.nucleus.util.ThrownFunction;
 import org.spongepowered.api.CatalogType;
@@ -132,10 +130,18 @@ public class Util {
     }
 
     public static String getTimeToNow(Instant time) {
-        return getTimeStringFromSeconds(Instant.now().getEpochSecond() - time.getEpochSecond());
+        return getTimeToNow(time, "standard.inamoment");
+    }
+
+    public static String getTimeToNow(Instant time, String nowkey) {
+        return getTimeStringFromSeconds(Instant.now().getEpochSecond() - time.getEpochSecond(), nowkey);
     }
 
     public static String getTimeStringFromSeconds(long time) {
+        return getTimeStringFromSeconds(time, "standard.inamoment");
+    }
+
+    public static String getTimeStringFromSeconds(long time, String nowkey) {
         time = Math.abs(time);
         long sec = time % 60;
         long min = (time / 60) % 60;
@@ -144,7 +150,7 @@ public class Util {
 
         MessageProvider messageProvider = Nucleus.getNucleus().getMessageProvider();
         if (time == 0) {
-            return messageProvider.getMessageWithFormat("standard.inamoment");
+            return messageProvider.getMessageWithFormat(nowkey);
         }
 
         StringBuilder sb = new StringBuilder();
@@ -192,20 +198,6 @@ public class Util {
         } else {
             return messageProvider.getMessageWithFormat("standard.unknown");
         }
-    }
-
-    @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-    public static <T extends EndTimestamp> Optional<T> testForEndTimestamp(Optional<T> omd, Action function) {
-        if (omd.isPresent()) {
-            T md = omd.get();
-            if (md.getEndTimestamp().isPresent() && md.getEndTimestamp().get().isBefore(Instant.now())) {
-                // Mute expired.
-                function.action();
-                return Optional.empty();
-            }
-        }
-
-        return omd;
     }
 
     public static String getTimeFromTicks(long ticks) {

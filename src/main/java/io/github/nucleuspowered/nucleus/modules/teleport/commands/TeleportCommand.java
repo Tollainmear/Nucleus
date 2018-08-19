@@ -8,8 +8,7 @@ import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.argumentparsers.AlternativeUsageArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.IfConditionElseArgument;
 import io.github.nucleuspowered.nucleus.argumentparsers.NicknameArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.PlayerConsoleArgument;
-import io.github.nucleuspowered.nucleus.argumentparsers.SelectorWrapperArgument;
+import io.github.nucleuspowered.nucleus.argumentparsers.SelectorArgument;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.Permissions;
 import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCommand;
 import io.github.nucleuspowered.nucleus.internal.command.AbstractCommand;
@@ -65,6 +64,7 @@ public class TeleportCommand extends AbstractCommand<CommandSource> implements R
     public Map<String, PermissionInformation> permissionSuffixesToRegister() {
         Map<String, PermissionInformation> m = new HashMap<>();
         m.put("offline", PermissionInformation.getWithTranslation("permission.teleport.offline", SuggestedLevel.ADMIN));
+        m.put("exempt.bordercheck", PermissionInformation.getWithTranslation("permission.tppos.border", SuggestedLevel.ADMIN));
         m.put("quiet", PermissionInformation.getWithTranslation("permission.teleport.quiet", SuggestedLevel.ADMIN));
         return m;
     }
@@ -73,6 +73,7 @@ public class TeleportCommand extends AbstractCommand<CommandSource> implements R
     public CommandElement[] getArguments() {
        return new CommandElement[]{
                 GenericArguments.flags().flag("f")
+                    .permissionFlag(this.permissions.getPermissionWithSuffix("exempt.bordercheck"),"b", "-border")
                     .setAnchorFlags(true)
                     .valueFlag(GenericArguments.requiringPermission(GenericArguments.bool(Text.of(this.quietKey)), this.permissions.getPermissionWithSuffix("quiet")), "q")
                     .buildWith(GenericArguments.none()),
@@ -85,8 +86,7 @@ public class TeleportCommand extends AbstractCommand<CommandSource> implements R
 
                             new IfConditionElseArgument(
                                 GenericArguments.optionalWeak(
-                                    SelectorWrapperArgument.nicknameSelector(Text.of(this.playerToKey), NicknameArgument.UnderlyingType.PLAYER,
-                                    true, Player.class, (c, p) -> PlayerConsoleArgument.shouldShow(p, c))),
+                                        new SelectorArgument(new NicknameArgument(Text.of(this.playerToKey), NicknameArgument.Target.PLAYER), Player.class)),
                                 GenericArguments.none(),
                                 this::testForSecondPlayer)),
 
@@ -144,8 +144,11 @@ public class TeleportCommand extends AbstractCommand<CommandSource> implements R
         }
 
         if (to.getPlayer().isPresent()) {
-            if (this.handler.getBuilder().setSource(src).setFrom(from).setTo(to.getPlayer().get()).setSafe(!args.<Boolean>getOne("f").orElse(false))
-                    .setSilentTarget(beQuiet).startTeleport()) {
+            if (this.handler.getBuilder().setSource(src).setFrom(from).setTo(to.getPlayer().get())
+                    .setSafe(!args.hasAny("f"))
+                    .setSilentTarget(beQuiet)
+                    .setBorderCheck(!args.hasAny("b"))
+                    .startTeleport()) {
                 return CommandResult.success();
             }
 
