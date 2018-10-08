@@ -5,14 +5,14 @@
 package io.github.nucleuspowered.nucleus.modules.vanish.listener;
 
 import io.github.nucleuspowered.nucleus.Nucleus;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.ServiceChangeListener;
 import io.github.nucleuspowered.nucleus.modules.vanish.commands.VanishCommand;
 import io.github.nucleuspowered.nucleus.modules.vanish.config.VanishConfig;
 import io.github.nucleuspowered.nucleus.modules.vanish.config.VanishConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.vanish.datamodules.VanishUserDataModule;
-import io.github.nucleuspowered.nucleus.modules.vanish.service.VanishService;
+import io.github.nucleuspowered.nucleus.modules.vanish.services.VanishService;
 import org.spongepowered.api.data.key.Keys;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
@@ -30,11 +30,11 @@ public class VanishListener implements Reloadable, ListenerBase {
 
     @Listener
     public void onLogin(ClientConnectionEvent.Join event, @Getter("getTargetEntity") Player player) {
-        boolean shouldVanish = (!ServiceChangeListener.isOpOnly() && player.hasPermission(this.loginVanishPermission))
+        boolean shouldVanish = (!ServiceChangeListener.isOpOnly() && hasPermission(player, this.loginVanishPermission))
                 || this.service.isVanished(player);
 
         if (shouldVanish) {
-            if (!player.hasPermission(this.permission)) {
+            if (!hasPermission(player, this.permission)) {
                 // No permission, no vanish.
                 this.service.unvanishPlayer(player);
                 return;

@@ -42,19 +42,15 @@ import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.messages.ConfigMessageProvider;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.internal.messages.ResourceMessageProvider;
-import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
+import io.github.nucleuspowered.nucleus.internal.permissions.PermissionResolverImpl;
 import io.github.nucleuspowered.nucleus.internal.permissions.ServiceChangeListener;
-import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import io.github.nucleuspowered.nucleus.internal.qsml.ModuleRegistrationProxyService;
 import io.github.nucleuspowered.nucleus.internal.qsml.NucleusConfigAdapter;
 import io.github.nucleuspowered.nucleus.internal.qsml.NucleusLoggerProxy;
 import io.github.nucleuspowered.nucleus.internal.qsml.QuickStartModuleConstructor;
 import io.github.nucleuspowered.nucleus.internal.qsml.event.BaseModuleEvent;
 import io.github.nucleuspowered.nucleus.internal.services.CommandRemapperService;
-import io.github.nucleuspowered.nucleus.internal.services.EnderchestAccessService;
-import io.github.nucleuspowered.nucleus.internal.services.HotbarFirstReorderService;
-import io.github.nucleuspowered.nucleus.internal.services.InventoryReorderService;
-import io.github.nucleuspowered.nucleus.internal.services.UserEnderchestAccessService;
+import io.github.nucleuspowered.nucleus.internal.services.PermissionResolver;
 import io.github.nucleuspowered.nucleus.internal.services.WarmupManager;
 import io.github.nucleuspowered.nucleus.internal.teleport.NucleusTeleportHandler;
 import io.github.nucleuspowered.nucleus.internal.text.NucleusTokenServiceImpl;
@@ -65,7 +61,7 @@ import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfig;
 import io.github.nucleuspowered.nucleus.modules.core.config.CoreConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.core.config.WarmupConfig;
 import io.github.nucleuspowered.nucleus.modules.core.datamodules.UniqueUserCountTransientModule;
-import io.github.nucleuspowered.nucleus.modules.core.service.UUIDChangeService;
+import io.github.nucleuspowered.nucleus.modules.core.services.UUIDChangeService;
 import ninja.leaping.configurate.commented.CommentedConfigurationNode;
 import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 import org.slf4j.Logger;
@@ -76,7 +72,6 @@ import org.spongepowered.api.Sponge;
 import org.spongepowered.api.asset.Asset;
 import org.spongepowered.api.command.source.ConsoleSource;
 import org.spongepowered.api.config.ConfigDir;
-import org.spongepowered.api.entity.living.player.User;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.Order;
 import org.spongepowered.api.event.game.state.GameInitializationEvent;
@@ -84,12 +79,11 @@ import org.spongepowered.api.event.game.state.GamePreInitializationEvent;
 import org.spongepowered.api.event.game.state.GameStartedServerEvent;
 import org.spongepowered.api.event.game.state.GameStartingServerEvent;
 import org.spongepowered.api.event.game.state.GameStoppedServerEvent;
+import org.spongepowered.api.plugin.Dependency;
 import org.spongepowered.api.plugin.Plugin;
 import org.spongepowered.api.plugin.PluginContainer;
 import org.spongepowered.api.scheduler.Task;
 import org.spongepowered.api.service.economy.EconomyService;
-import org.spongepowered.api.service.permission.PermissionDescription;
-import org.spongepowered.api.service.permission.PermissionService;
 import org.spongepowered.api.text.Text;
 import org.spongepowered.api.text.channel.MessageReceiver;
 import org.spongepowered.api.text.format.TextColors;
@@ -120,7 +114,7 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import javax.inject.Inject;
 
-@Plugin(id = ID, name = NAME, version = VERSION, description = DESCRIPTION)
+@Plugin(id = ID, name = NAME, version = VERSION, description = DESCRIPTION, dependencies = @Dependency(id = "spongeapi", version = "7.1.0"))
 public class NucleusPlugin extends Nucleus {
 
     private static final String divider = "+------------------------------------------------------------+";
@@ -140,6 +134,7 @@ public class NucleusPlugin extends Nucleus {
     private KitService kitService;
     private TextParsingUtils textParsingUtils;
     private NameUtil nameUtil;
+    private PermissionResolver permissionResolver = PermissionResolverImpl.INSTANCE;
     private final List<Reloadable> reloadableList = Lists.newArrayList();
     private DocGenCache docGenCache = null;
     private final NucleusTeleportHandler teleportHandler = new NucleusTeleportHandler();
@@ -244,13 +239,8 @@ public class NucleusPlugin extends Nucleus {
             return;
         }
 
-        s.sendMessage(Text.of(TextColors.WHITE, "--------------------------"));
         s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome", PluginInfo.NAME,
                 PluginInfo.VERSION, Sponge.getPlatform().getContainer(Platform.Component.API).getVersion().orElse("unknown")));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome2"));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome3"));
-        s.sendMessage(this.messageProvider.getTextMessageWithFormat("startup.welcome4"));
-        s.sendMessage(Text.of(TextColors.WHITE, "--------------------------"));
 
         this.logger.info(this.messageProvider.getMessageWithFormat("startup.preinit", PluginInfo.NAME));
         Game game = Sponge.getGame();
@@ -409,29 +399,6 @@ public class NucleusPlugin extends Nucleus {
             return;
         }
 
-        // ---- API7 COMPAT
-
-        // Register the inventory service
-        // TODO: Remove for API 7.1
-        try {
-            Class.forName("org.spongepowered.api.item.inventory.InventoryTransformations");
-            this.serviceManager.registerService(InventoryReorderService.class, new HotbarFirstReorderService());
-        } catch (Throwable e) {
-            this.logger.warn("Hotbar transformations are not available: kits may be given in an unexpected order. Update Sponge to fix this.");
-            this.serviceManager.registerService(InventoryReorderService.class, InventoryReorderService.DEFAULT);
-        }
-
-        // Register the Enderchest Service
-        try {
-            User.class.getMethod("getEnderChestInventory");
-            this.serviceManager.registerService(EnderchestAccessService.class, new UserEnderchestAccessService());
-        } catch (Throwable e) {
-            this.logger.warn("Ender Chest access is only available for online players. Update Sponge to get access to offline players' enderchests.");
-            this.serviceManager.registerService(EnderchestAccessService.class, EnderchestAccessService.DEFAULT);
-        }
-
-        // ---- END API7 COMPAT
-
         try {
             Sponge.getEventManager().post(new BaseModuleEvent.AboutToConstructEvent(this));
             this.logger.info(this.messageProvider.getMessageWithFormat("startup.moduleloading", PluginInfo.NAME));
@@ -461,7 +428,9 @@ public class NucleusPlugin extends Nucleus {
 
         logMessageDefault();
         this.logger.info(this.messageProvider.getMessageWithFormat("startup.moduleloaded", PluginInfo.NAME));
-        registerPermissions();
+        PermissionResolverImpl.INSTANCE.registerPermissions();
+        registerReloadable(this::reloadPerm);
+        this.reloadPerm();
         Sponge.getEventManager().post(new BaseModuleEvent.Complete(this));
 
         this.logger.info(this.messageProvider.getMessageWithFormat("startup.completeinit", PluginInfo.NAME));
@@ -725,6 +694,14 @@ public class NucleusPlugin extends Nucleus {
         }
     }
 
+    private void reloadPerm() {
+        if (getInternalServiceManager().getServiceUnchecked(CoreConfigAdapter.class).getNodeOrDefault().isUseParentPerms()) {
+            this.permissionResolver = PermissionResolverImpl.INSTANCE;
+        } else {
+            this.permissionResolver = PermissionResolver.SIMPLE;
+        }
+    }
+
     @Override
     public boolean reloadMessages() {
         boolean r = true;
@@ -949,26 +926,9 @@ public class NucleusPlugin extends Nucleus {
         }
     }
 
-    @Override protected void registerPermissions() {
-        Optional<PermissionService> ops = Sponge.getServiceManager().provide(PermissionService.class);
-        ops.ifPresent(permissionService -> {
-            Map<String, PermissionInformation> m = this.getPermissionRegistry().getPermissions();
-            m.entrySet().stream().filter(x -> {
-                SuggestedLevel lvl = x.getValue().level;
-                return lvl == SuggestedLevel.ADMIN || lvl == SuggestedLevel.OWNER;
-            })
-                    .filter(x -> x.getValue().isNormal)
-                    .forEach(k -> permissionService.newDescriptionBuilder(this).assign(PermissionDescription.ROLE_ADMIN, true)
-                            .description(k.getValue().description).id(k.getKey()).register());
-            m.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.MOD)
-                    .filter(x -> x.getValue().isNormal)
-                    .forEach(k -> permissionService.newDescriptionBuilder(this).assign(PermissionDescription.ROLE_STAFF, true)
-                            .description(k.getValue().description).id(k.getKey()).register());
-            m.entrySet().stream().filter(x -> x.getValue().level == SuggestedLevel.USER)
-                    .filter(x -> x.getValue().isNormal)
-                    .forEach(k -> permissionService.newDescriptionBuilder(this).assign(PermissionDescription.ROLE_USER, true)
-                            .description(k.getValue().description).id(k.getKey()).register());
-        });
+    @Override
+    public PermissionResolver getPermissionResolver() {
+        return this.permissionResolver;
     }
 
     @Override

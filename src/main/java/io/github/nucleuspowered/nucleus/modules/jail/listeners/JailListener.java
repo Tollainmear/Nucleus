@@ -11,7 +11,7 @@ import io.github.nucleuspowered.nucleus.api.events.NucleusTeleportEvent;
 import io.github.nucleuspowered.nucleus.api.nucleusdata.NamedLocation;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
 import io.github.nucleuspowered.nucleus.internal.CommandPermissionHandler;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.modules.core.events.NucleusOnLoginEvent;
 import io.github.nucleuspowered.nucleus.modules.fly.datamodules.FlyUserDataModule;
@@ -19,7 +19,7 @@ import io.github.nucleuspowered.nucleus.modules.jail.commands.JailCommand;
 import io.github.nucleuspowered.nucleus.modules.jail.config.JailConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.jail.data.JailData;
 import io.github.nucleuspowered.nucleus.modules.jail.datamodules.JailUserDataModule;
-import io.github.nucleuspowered.nucleus.modules.jail.handlers.JailHandler;
+import io.github.nucleuspowered.nucleus.modules.jail.services.JailHandler;
 import io.github.nucleuspowered.nucleus.util.PermissionMessageChannel;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandSource;
@@ -163,11 +163,11 @@ public class JailListener implements Reloadable, ListenerBase {
     @Listener
     public void onAboutToTeleport(NucleusTeleportEvent.AboutToTeleport event, @Root CommandSource cause, @Getter("getTargetEntity") Player player) {
         if (this.handler.isPlayerJailed(player)) {
-            if (!cause.hasPermission(this.teleport)) {
+            if (!hasPermission(cause, this.teleport)) {
                 event.setCancelled(true);
                 event.setCancelMessage(
                         Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("jail.abouttoteleporttarget.isjailed", player.getName()));
-            } else if (!player.hasPermission(this.teleportto)) {
+            } else if (!hasPermission(cause, this.teleportto)) {
                 event.setCancelled(true);
                 event.setCancelMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("jail.abouttoteleportcause.targetisjailed",
                         player.getName()));

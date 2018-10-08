@@ -9,8 +9,8 @@ import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.api.events.NucleusFirstJoinEvent;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -44,7 +44,7 @@ public class ConnectionMessagesListener implements Reloadable, ListenerBase {
 
     @Listener
     public void onPlayerLogin(ClientConnectionEvent.Join joinEvent, @Getter("getTargetEntity") Player pl) {
-        if (joinEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
+        if (joinEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && hasPermission(pl, this.disablePermission))) {
             joinEvent.setMessageCancelled(true);
             return;
         }
@@ -84,7 +84,7 @@ public class ConnectionMessagesListener implements Reloadable, ListenerBase {
 
     @Listener
     public void onPlayerQuit(ClientConnectionEvent.Disconnect leaveEvent, @Getter("getTargetEntity") Player pl) {
-        if (leaveEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && pl.hasPermission(this.disablePermission))) {
+        if (leaveEvent.isMessageCancelled() || (this.cmc.isDisableWithPermission() && hasPermission(pl, this.disablePermission))) {
             leaveEvent.setMessageCancelled(true);
             return;
         }

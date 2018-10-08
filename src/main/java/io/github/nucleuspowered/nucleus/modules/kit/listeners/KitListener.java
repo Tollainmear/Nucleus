@@ -9,12 +9,12 @@ import io.github.nucleuspowered.nucleus.api.events.NucleusFirstJoinEvent;
 import io.github.nucleuspowered.nucleus.api.exceptions.KitRedeemException;
 import io.github.nucleuspowered.nucleus.dataservices.KitService;
 import io.github.nucleuspowered.nucleus.dataservices.loaders.UserDataManager;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.modules.kit.config.KitConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.kit.datamodules.KitUserDataModule;
-import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
+import io.github.nucleuspowered.nucleus.modules.kit.services.KitHandler;
 import org.spongepowered.api.entity.living.player.Player;
 import org.spongepowered.api.event.Listener;
 import org.spongepowered.api.event.filter.Getter;
@@ -58,7 +58,7 @@ public class KitListener implements Reloadable, ListenerBase {
             KitUserDataModule user = loader.get(player.getUniqueId()).get().get(KitUserDataModule.class);
             gds.getAutoRedeemable().stream()
                 .filter(k -> k.ignoresPermission() ||
-                        !player.hasPermission(PermissionRegistry.PERMISSIONS_PREFIX + "kits." + k.getName().toLowerCase()))
+                        !hasPermission(player, PermissionRegistry.PERMISSIONS_PREFIX + "kits." + k.getName().toLowerCase()))
                 .forEach(k -> {
                     try {
                         handler.redeemKit(k, player, true, this.mustGetAll);

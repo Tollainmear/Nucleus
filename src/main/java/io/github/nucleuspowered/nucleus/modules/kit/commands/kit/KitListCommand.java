@@ -16,7 +16,7 @@ import io.github.nucleuspowered.nucleus.internal.annotations.command.RegisterCom
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import io.github.nucleuspowered.nucleus.modules.kit.commands.KitFallbackBase;
 import io.github.nucleuspowered.nucleus.modules.kit.datamodules.KitUserDataModule;
-import io.github.nucleuspowered.nucleus.modules.kit.handlers.KitHandler;
+import io.github.nucleuspowered.nucleus.modules.kit.services.KitHandler;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.command.CommandResult;
 import org.spongepowered.api.command.CommandSource;
@@ -64,7 +64,7 @@ public class KitListCommand extends KitFallbackBase<CommandSource> {
 
         final boolean showHidden = this.kitPermissionHandler.testSuffix(src, "showhidden");
         KIT_HANDLER.getKitNames(showHidden).stream()
-                .filter(kit -> src.hasPermission(KitHandler.getPermissionForKit(kit.toLowerCase())))
+                .filter(kit -> hasPermission(src, KitHandler.getPermissionForKit(kit.toLowerCase())))
                 .forEach(kit -> kitText.add(createKit(src, user, kit, KIT_HANDLER.getKit(kit).get())));
 
         PaginationList.Builder paginationBuilder = paginationService.builder().contents(kitText)

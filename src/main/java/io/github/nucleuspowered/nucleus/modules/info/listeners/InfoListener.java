@@ -6,7 +6,7 @@ package io.github.nucleuspowered.nucleus.modules.info.listeners;
 
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.Nucleus;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -41,7 +41,7 @@ public class InfoListener implements Reloadable, ListenerBase.Conditional {
     public void playerJoin(ClientConnectionEvent.Join event, @Getter("getTargetEntity") Player player) {
         // Send message one second later on the Async thread.
         Sponge.getScheduler().createAsyncExecutor(Nucleus.getNucleus()).schedule(() -> {
-                if (player.hasPermission(this.motdPerm)) {
+                if (hasPermission(player, this.motdPerm)) {
                     Nucleus.getNucleus().getTextFileController(InfoModule.MOTD_KEY).ifPresent(x -> {
                         if (this.usePagination) {
                             x.sendToPlayer(player, this.title);

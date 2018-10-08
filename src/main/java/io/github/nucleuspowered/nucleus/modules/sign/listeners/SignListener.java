@@ -5,8 +5,8 @@
 package io.github.nucleuspowered.nucleus.modules.sign.listeners;
 
 import com.google.common.collect.Maps;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
 import org.spongepowered.api.data.manipulator.mutable.tileentity.SignData;
@@ -26,7 +26,7 @@ public class SignListener implements ListenerBase {
     public void onPlayerChangeSign(ChangeSignEvent event, @Root Player player) {
         SignData signData = event.getText();
 
-        if (player.hasPermission(this.permission)) {
+        if (hasPermission(player, this.permission)) {
             for (int i = 0; i < signData.lines().size(); i++) {
                 signData = signData.set(signData.lines().set(i, TextSerializers.FORMATTING_CODE.deserialize(signData.lines().get(i).toPlain())));
             }

@@ -7,8 +7,8 @@ package io.github.nucleuspowered.nucleus.modules.mute.listeners;
 import io.github.nucleuspowered.nucleus.Nucleus;
 import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.events.NucleusMessageEvent;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.data.EndTimestamp;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.modules.message.events.InternalNucleusHelpOpEvent;
 import io.github.nucleuspowered.nucleus.modules.mute.commands.MuteCommand;
@@ -16,7 +16,7 @@ import io.github.nucleuspowered.nucleus.modules.mute.commands.VoiceCommand;
 import io.github.nucleuspowered.nucleus.modules.mute.config.MuteConfig;
 import io.github.nucleuspowered.nucleus.modules.mute.config.MuteConfigAdapter;
 import io.github.nucleuspowered.nucleus.modules.mute.data.MuteData;
-import io.github.nucleuspowered.nucleus.modules.mute.handler.MuteHandler;
+import io.github.nucleuspowered.nucleus.modules.mute.services.MuteHandler;
 import io.github.nucleuspowered.nucleus.util.PermissionMessageChannel;
 import org.spongepowered.api.Sponge;
 import org.spongepowered.api.entity.living.player.Player;
@@ -130,7 +130,7 @@ public class MuteListener implements Reloadable, ListenerBase {
     }
 
     private boolean cancelOnGlobalMute(Player player, boolean isCancelled) {
-        if (isCancelled || !this.handler.isGlobalMuteEnabled() || player.hasPermission(this.voicePerm)) {
+        if (isCancelled || !this.handler.isGlobalMuteEnabled() || hasPermission(player, this.voicePerm)) {
             return false;
         }
 

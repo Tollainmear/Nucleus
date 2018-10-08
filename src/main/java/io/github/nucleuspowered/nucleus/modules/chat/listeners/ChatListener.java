@@ -11,12 +11,13 @@ import io.github.nucleuspowered.nucleus.Util;
 import io.github.nucleuspowered.nucleus.api.EventContexts;
 import io.github.nucleuspowered.nucleus.api.chat.NucleusNoFormatChannel;
 import io.github.nucleuspowered.nucleus.api.service.NucleusMessageTokenService;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
+import io.github.nucleuspowered.nucleus.internal.services.PermissionResolver;
 import io.github.nucleuspowered.nucleus.internal.text.TextParsingUtils;
 import io.github.nucleuspowered.nucleus.modules.chat.ChatModule;
 import io.github.nucleuspowered.nucleus.modules.chat.config.ChatConfig;
@@ -84,8 +85,9 @@ public class ChatListener implements Reloadable, ListenerBase.Conditional {
     public static String stripPermissionless(Subject source, String message) {
         if (message.contains("&")) {
             String m = message.toLowerCase();
+            PermissionResolver resolver = Nucleus.getNucleus().getPermissionResolver();
             for (Map.Entry<String, Tuple<String[], Function<String, String>>> r : replacements.entrySet()) {
-                if (m.contains(r.getKey()) && Arrays.stream(r.getValue().getFirst()).noneMatch(source::hasPermission)) {
+                if (m.contains(r.getKey()) && Arrays.stream(r.getValue().getFirst()).noneMatch(x -> resolver.hasPermission(source, x))) {
                     message = r.getValue().getSecond().apply(message);
                 }
             }
@@ -160,14 +162,16 @@ public class ChatListener implements Reloadable, ListenerBase.Conditional {
     }
 
     private Text useMessage(Player player, Text rawMessage, ChatTemplateConfig chatTemplateConfig) {
-        String m = stripPermissionless(player, TextSerializers.FORMATTING_CODE.serialize(rawMessage));
+        String m = TextSerializers.FORMATTING_CODE.serialize(rawMessage);
         if (this.chatConfig.isRemoveBlueUnderline()) {
-            m = m.replaceAll("&9&n([A-Za-z0-9-.]+)", "$1");
+            m = m.replaceAll("&9&n([A-Za-z0-9-.]+)(&r)?", "$1");
         }
 
+        m = stripPermissionless(player, m);
+
         Text result;
-        if (player.hasPermission(prefix + "url")) {
-            result = TextParsingUtils.addUrls(m);
+        if (hasPermission(player, prefix + "url")) {
+            result = TextParsingUtils.addUrls(m, !this.chatConfig.isRemoveBlueUnderline());
         } else {
             result = TextSerializers.FORMATTING_CODE.deserialize(m);
         }

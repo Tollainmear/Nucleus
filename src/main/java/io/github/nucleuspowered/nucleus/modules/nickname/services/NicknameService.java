@@ -13,8 +13,11 @@ import io.github.nucleuspowered.nucleus.api.exceptions.NicknameException;
 import io.github.nucleuspowered.nucleus.api.service.NucleusNicknameService;
 import io.github.nucleuspowered.nucleus.dataservices.modular.ModularUserService;
 import io.github.nucleuspowered.nucleus.internal.CommandPermissionHandler;
+import io.github.nucleuspowered.nucleus.internal.annotations.APIService;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ServiceBase;
 import io.github.nucleuspowered.nucleus.internal.messages.MessageProvider;
+import io.github.nucleuspowered.nucleus.internal.traits.PermissionTrait;
 import io.github.nucleuspowered.nucleus.modules.nickname.NicknameModule;
 import io.github.nucleuspowered.nucleus.modules.nickname.commands.NicknameCommand;
 import io.github.nucleuspowered.nucleus.modules.nickname.config.NicknameConfig;
@@ -46,8 +49,10 @@ import java.util.stream.Collectors;
 
 import javax.annotation.Nullable;
 
-public class NicknameService implements NucleusNicknameService, Reloadable {
+@APIService(NucleusNicknameService.class)
+public class NicknameService implements NucleusNicknameService, Reloadable, PermissionTrait, ServiceBase {
 
+    private Text prefix = Text.EMPTY;
     private Pattern pattern;
     private int min = 3;
     private int max = 16;
@@ -120,6 +125,11 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
                 Tuple.of(Pattern.compile("[&]+k", Pattern.CASE_INSENSITIVE).matcher(""),
                         mp.getTextMessageWithFormat("command.nick.style.nopermswith", "magic")));
         this.registered = true;
+    }
+
+    @Override
+    public Optional<Text> getNicknameWithPrefix(User user) {
+        return getNickname(user).map(x -> Text.join(this.prefix, x));
     }
 
     @Override
@@ -267,6 +277,7 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
         this.pattern = nc.getPattern();
         this.min = nc.getMinNicknameLength();
         this.max = nc.getMaxNicknameLength();
+        this.prefix = TextSerializers.FORMATTING_CODE.deserialize(nc.getPrefix());
     }
 
     private void stripPermissionless(Subject source, Text message) throws NicknameException {
@@ -274,11 +285,15 @@ public class NicknameService implements NucleusNicknameService, Reloadable {
         if (m.contains("&")) {
             for (Map.Entry<String[], Tuple<Matcher, Text>> r : this.replacements.entrySet()) {
                 // If we don't have the required permission...
-                if (r.getValue().getFirst().reset(m).find() && Arrays.stream(r.getKey()).noneMatch(source::hasPermission)) {
+                if (r.getValue().getFirst().reset(m).find() && Arrays.stream(r.getKey()).noneMatch(x -> hasPermission(source, x))) {
                     // throw
                     throw new NicknameException(r.getValue().getSecond(), NicknameException.Type.INVALID_STYLE_OR_COLOUR);
                 }
             }
         }
+    }
+
+    public Text getNickPrefix() {
+        return this.prefix;
     }
 }

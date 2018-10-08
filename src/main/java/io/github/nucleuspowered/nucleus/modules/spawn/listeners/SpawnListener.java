@@ -7,8 +7,8 @@ package io.github.nucleuspowered.nucleus.modules.spawn.listeners;
 import com.flowpowered.math.vector.Vector3d;
 import com.google.common.collect.Maps;
 import io.github.nucleuspowered.nucleus.Nucleus;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.interfaces.Reloadable;
 import io.github.nucleuspowered.nucleus.internal.permissions.PermissionInformation;
 import io.github.nucleuspowered.nucleus.internal.permissions.SuggestedLevel;
@@ -88,7 +88,7 @@ public class SpawnListener implements Reloadable, ListenerBase {
 
         // Throw them to the default world spawn if the config suggests so.
         User user = Sponge.getServiceManager().provideUnchecked(UserStorageService.class).getOrCreate(loginEvent.getProfile());
-        if (this.spawnConfig.isSpawnOnLogin() && !user.hasPermission(this.spawnExempt)) {
+        if (this.spawnConfig.isSpawnOnLogin() && !hasPermission(user, this.spawnExempt)) {
 
             World world = loginEvent.getFromTransform().getExtent();
             final String worldName = world.getName();

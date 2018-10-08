@@ -6,8 +6,8 @@ package io.github.nucleuspowered.nucleus.modules.world.listeners;
 
 import com.google.common.collect.Sets;
 import io.github.nucleuspowered.nucleus.Nucleus;
-import io.github.nucleuspowered.nucleus.internal.ListenerBase;
 import io.github.nucleuspowered.nucleus.internal.PermissionRegistry;
+import io.github.nucleuspowered.nucleus.internal.interfaces.ListenerBase;
 import io.github.nucleuspowered.nucleus.modules.world.WorldModule;
 import io.github.nucleuspowered.nucleus.modules.world.config.WorldConfig;
 import io.github.nucleuspowered.nucleus.modules.world.config.WorldConfigAdapter;
@@ -35,7 +35,7 @@ public class WorldListener implements ListenerBase.Conditional {
         World target = event.getToTransform().getExtent();
         if (player.getWorld().equals(target)) return;
 
-        if (!player.hasPermission(PermissionRegistry.PERMISSIONS_PREFIX + "worlds." + target.getName().toLowerCase())) {
+        if (!hasPermission(player, PermissionRegistry.PERMISSIONS_PREFIX + "worlds." + target.getName().toLowerCase())) {
             event.setCancelled(true);
             if (!this.messageSent.contains(player.getUniqueId())) {
                 player.sendMessage(Nucleus.getNucleus().getMessageProvider().getTextMessageWithFormat("world.access.denied", target.getName()));
